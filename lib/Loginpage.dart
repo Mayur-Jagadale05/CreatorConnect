@@ -1,5 +1,6 @@
 import 'package:creatorconnect/RegisterPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class LoginStatus {
@@ -192,9 +193,7 @@ class _LoginpageState extends State<Loginpage> {
               filterQuality: FilterQuality.high,
             ),
           ),
-          Positioned.fill(
-            child: ColoredBox(color: pageBg.withOpacity(0.48)),
-          ),
+          Positioned.fill(child: ColoredBox(color: pageBg.withOpacity(0.48))),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -279,27 +278,28 @@ class _LoginpageState extends State<Loginpage> {
                           TextFormField(
                             controller: passwordcontroller,
                             obscureText: _obscurePassword,
-                            decoration: _inputDecoration(
-                              'Password',
-                              Icons.lock_outline_rounded,
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                tooltip: _obscurePassword
-                                    ? 'Show password'
-                                    : 'Hide password',
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
-                                  color: secondaryText,
+                            decoration:
+                                _inputDecoration(
+                                  'Password',
+                                  Icons.lock_outline_rounded,
+                                ).copyWith(
+                                  suffixIcon: IconButton(
+                                    tooltip: _obscurePassword
+                                        ? 'Show password'
+                                        : 'Hide password',
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: secondaryText,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your password.';
