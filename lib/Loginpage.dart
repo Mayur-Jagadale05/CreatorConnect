@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:creatorconnect/RegisterPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +45,6 @@ class _LoginpageState extends State<Loginpage> {
       errorMessage = null;
     });
 
-    // Authwrapper must not open a dashboard before role verification.
     LoginStatus.isCheckingRole.value = true;
 
     bool signedIn = false;
@@ -84,7 +82,6 @@ class _LoginpageState extends State<Loginpage> {
         throw Exception('Role is missing from your Firebase profile.');
       }
 
-      // Business and Businessman are intentionally different roles.
       if (savedRole.toLowerCase() != selectedRole!.trim().toLowerCase()) {
         throw Exception(
           'Role mismatch! You selected "$selectedRole", '
@@ -93,22 +90,26 @@ class _LoginpageState extends State<Loginpage> {
       }
 
       roleVerified = true;
-
-      // Authwrapper opens the correct dashboard after verification.
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
-        setState(() {
-          errorMessage = 'Invalid email or password.';
-        });
+        if (mounted) {
+          setState(() {
+            errorMessage = 'Invalid email or password.';
+          });
+        }
       } else if (e.code == 'wrong-password') {
-        setState(() {
-          errorMessage = 'Incorrect password.';
-        });
+        if (mounted) {
+          setState(() {
+            errorMessage = 'Incorrect password.';
+          });
+        }
       } else if (e.code == 'invalid-email') {
-        setState(() {
-          errorMessage = 'Please enter a valid email address.';
-        });
-      } else {
+        if (mounted) {
+          setState(() {
+            errorMessage = 'Please enter a valid email address.';
+          });
+        }
+      } else if (mounted) {
         setState(() {
           errorMessage = e.message ?? 'Login failed. Please try again.';
         });
@@ -126,13 +127,10 @@ class _LoginpageState extends State<Loginpage> {
         });
       }
     } finally {
-      // Never leave an unverified user signed in.
       if (signedIn && !roleVerified) {
         try {
           await FirebaseAuth.instance.signOut();
-        } catch (_) {
-          // Keep the original login error visible.
-        }
+        } catch (_) {}
       }
 
       LoginStatus.isCheckingRole.value = false;
@@ -157,7 +155,7 @@ class _LoginpageState extends State<Loginpage> {
       labelText: label,
       prefixIcon: Icon(icon, color: purple),
       filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.72),
+      fillColor: Colors.white.withOpacity(0.72),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
@@ -194,11 +192,9 @@ class _LoginpageState extends State<Loginpage> {
               filterQuality: FilterQuality.high,
             ),
           ),
-
           Positioned.fill(
-            child: ColoredBox(color: pageBg.withValues(alpha: 0.48)),
+            child: ColoredBox(color: pageBg.withOpacity(0.48)),
           ),
-
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -212,12 +208,12 @@ class _LoginpageState extends State<Loginpage> {
                       vertical: 36,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.82),
+                      color: Colors.white.withOpacity(0.82),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(color: borderColor, width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: purple.withValues(alpha: 0.12),
+                          color: purple.withOpacity(0.12),
                           blurRadius: 30,
                           offset: const Offset(0, 14),
                         ),
@@ -229,7 +225,6 @@ class _LoginpageState extends State<Loginpage> {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // CreatorConnect logo
                           Center(
                             child: Container(
                               height: 82,
@@ -245,10 +240,7 @@ class _LoginpageState extends State<Loginpage> {
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 24),
-
-                          // App title
                           const Text(
                             'CreatorConnect',
                             textAlign: TextAlign.center,
@@ -259,9 +251,7 @@ class _LoginpageState extends State<Loginpage> {
                               letterSpacing: -0.7,
                             ),
                           ),
-
                           const SizedBox(height: 10),
-
                           const Text(
                             'Welcome back to your creative network.',
                             textAlign: TextAlign.center,
@@ -270,10 +260,7 @@ class _LoginpageState extends State<Loginpage> {
                               color: secondaryText,
                             ),
                           ),
-
                           const SizedBox(height: 32),
-
-                          // Email field
                           TextFormField(
                             controller: emailcontroller,
                             keyboardType: TextInputType.emailAddress,
@@ -288,35 +275,31 @@ class _LoginpageState extends State<Loginpage> {
                               return null;
                             },
                           ),
-
                           const SizedBox(height: 20),
-
-                          // Password field
                           TextFormField(
                             controller: passwordcontroller,
                             obscureText: _obscurePassword,
-                            decoration:
-                                _inputDecoration(
-                                  'Password',
-                                  Icons.lock_outline_rounded,
-                                ).copyWith(
-                                  suffixIcon: IconButton(
-                                    tooltip: _obscurePassword
-                                        ? 'Show password'
-                                        : 'Hide password',
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility_outlined
-                                          : Icons.visibility_off_outlined,
-                                      color: secondaryText,
-                                    ),
-                                  ),
+                            decoration: _inputDecoration(
+                              'Password',
+                              Icons.lock_outline_rounded,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  color: secondaryText,
                                 ),
+                              ),
+                            ),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your password.';
@@ -324,12 +307,9 @@ class _LoginpageState extends State<Loginpage> {
                               return null;
                             },
                           ),
-
                           const SizedBox(height: 20),
-
-                          // Role dropdown
                           DropdownButtonFormField<String>(
-                            initialValue: selectedRole,
+                            value: selectedRole,
                             isExpanded: true,
                             items: const [
                               DropdownMenuItem(
@@ -369,8 +349,6 @@ class _LoginpageState extends State<Loginpage> {
                             borderRadius: BorderRadius.circular(16),
                             iconEnabledColor: purple,
                           ),
-
-                          // Login error
                           if (errorMessage != null) ...[
                             const SizedBox(height: 18),
                             Container(
@@ -403,10 +381,7 @@ class _LoginpageState extends State<Loginpage> {
                               ),
                             ),
                           ],
-
                           const SizedBox(height: 24),
-
-                          // Login button
                           SizedBox(
                             height: 62,
                             child: FilledButton(
@@ -437,10 +412,7 @@ class _LoginpageState extends State<Loginpage> {
                                     ),
                             ),
                           ),
-
                           const SizedBox(height: 20),
-
-                          // Create account navigation
                           Wrap(
                             alignment: WrapAlignment.center,
                             crossAxisAlignment: WrapCrossAlignment.center,
