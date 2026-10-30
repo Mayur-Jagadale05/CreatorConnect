@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:creatorconnect/ProfileDetailsPage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-// import 'package:demo/ProfileDetailsPage.dart';
 
 class EditorPage extends StatefulWidget {
   const EditorPage({super.key});
@@ -22,6 +22,7 @@ class _EditorPageState extends State<EditorPage>
 
   static const Color purple = Color(0xFF35132F);
   static const Color pageBg = Color(0xFFF7F5F3);
+  static const Color iceSilver = Color(0xFFF0EDF0);
   static const Color marigold = Color(0xFFF2D39A);
   static const Color primaryText = Color(0xFF302A33);
   static const Color secondaryText = Color(0xFF827985);
@@ -32,7 +33,9 @@ class _EditorPageState extends State<EditorPage>
   String selectedSidebarItem = 'Home';
 
   bool notificationsEnabled = true;
-  bool _loadingCreators = false;
+  bool _savingNotification = false;
+  String? _notificationError;
+  bool _loadingCreators = true;
 
   final TextEditingController searchController = TextEditingController();
   final PageController _heroPageController = PageController();
@@ -53,7 +56,6 @@ class _EditorPageState extends State<EditorPage>
     'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1800&q=85',
   ];
 
-  /*
   User? get currentUser => FirebaseAuth.instance.currentUser;
 
   DocumentReference<Map<String, dynamic>>? get _myUserDocument {
@@ -62,13 +64,13 @@ class _EditorPageState extends State<EditorPage>
 
     return FirebaseFirestore.instance.collection('users').doc(user.uid);
   }
-  */
 
   @override
   void initState() {
     super.initState();
 
-    // Firebase-backed profile and creator loading are disabled.
+    _loadNotificationPreference();
+    _loadCreators();
 
     _heroTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (mounted && selectedSidebarItem == 'Home') {
@@ -90,7 +92,6 @@ class _EditorPageState extends State<EditorPage>
   // FIRESTORE: LOAD CREATORS
   // ------------------------------------------------------------
 
-  /*
   Future<void> _loadCreators() async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -129,13 +130,11 @@ class _EditorPageState extends State<EditorPage>
       _showMessage('Unable to load creators. Please try again.');
     }
   }
-  */
 
   // ------------------------------------------------------------
   // NOTIFICATION SETTINGS
   // ------------------------------------------------------------
 
-  /*
   Future<void> _loadNotificationPreference() async {
     final ref = _myUserDocument;
     if (ref == null) return;
@@ -153,11 +152,43 @@ class _EditorPageState extends State<EditorPage>
       debugPrint('Notification preference error: $error');
     }
   }
-  */
 
-  void _saveNotificationPreference(bool value) {
-    setState(() => notificationsEnabled = value);
-    _showMessage('Preference updated for this session only.');
+  Future<void> _saveNotificationPreference(bool value) async {
+    final ref = _myUserDocument;
+
+    if (ref == null) {
+      _showMessage('Please log in to change settings.');
+      return;
+    }
+
+    setState(() {
+      _savingNotification = true;
+      _notificationError = null;
+    });
+
+    try {
+      await ref.set({
+        'notificationsEnabled': value,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (!mounted) return;
+
+      setState(() => notificationsEnabled = value);
+      _showMessage('Notification preference saved.');
+    } catch (error) {
+      debugPrint('Save notification error: $error');
+
+      if (!mounted) return;
+
+      setState(() {
+        _notificationError = 'Could not save notification preference.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _savingNotification = false);
+      }
+    }
   }
 
   // ------------------------------------------------------------
@@ -181,8 +212,15 @@ class _EditorPageState extends State<EditorPage>
       );
   }
 
-  void _openProfile() {
-    _showMessage('Profile editing is unavailable while Firebase is disabled.');
+  Future<void> _openProfile() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ProfileDetailsPage()),
+    );
+
+    if (mounted) {
+      _loadCreators();
+    }
   }
 
   Future<void> _logout() async {
@@ -213,11 +251,29 @@ class _EditorPageState extends State<EditorPage>
 
     if (confirmed != true) return;
 
-    _showMessage('Sign-out is unavailable while Firebase is disabled.');
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (error) {
+      debugPrint('Logout error: $error');
+      _showMessage('Logout failed. Please try again.');
+    }
   }
 
-  void _resetPassword() {
-    _showMessage('Password reset is unavailable while Firebase is disabled.');
+  Future<void> _resetPassword() async {
+    final email = currentUser?.email;
+
+    if (email == null || email.isEmpty) {
+      _showMessage('No email address is available.');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      _showMessage('Password reset email sent to $email');
+    } on FirebaseAuthException catch (error) {
+      _showMessage(error.message ?? 'Unable to send reset email.');
+    }
   }
 
   void _selectSidebarItem(String item) {
@@ -262,8 +318,11 @@ class _EditorPageState extends State<EditorPage>
 
   @override
   Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 760;
+
     return Scaffold(
       backgroundColor: pageBg,
+      bottomNavigationBar: mobile ? _buildMobileBottomNavigation() : null,
       body: Stack(
         children: [
           const Positioned.fill(
@@ -292,22 +351,10 @@ class _EditorPageState extends State<EditorPage>
                       final compact = constraints.maxWidth < 760;
 
                       if (compact) {
-                        return Column(
-                          children: [
-                            _buildCompactSidebar(),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                controller: _dashboardScrollController,
-                                padding: const EdgeInsets.fromLTRB(
-                                  14,
-                                  14,
-                                  14,
-                                  28,
-                                ),
-                                child: _buildSelectedPage(),
-                              ),
-                            ),
-                          ],
+                        return SingleChildScrollView(
+                          controller: _dashboardScrollController,
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+                          child: _buildSelectedPage(),
                         );
                       }
 
@@ -507,32 +554,6 @@ class _EditorPageState extends State<EditorPage>
           ..._sidebarItems(),
 
           const Spacer(),
-
-          Container(
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: lavender.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.eco_outlined, color: purple, size: 20),
-                SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    'Make something\nmeaningful.',
-                    style: TextStyle(
-                      color: purple,
-                      fontSize: 12,
-                      height: 1.4,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -552,6 +573,82 @@ class _EditorPageState extends State<EditorPage>
         child: Row(children: _sidebarItems(compact: true)),
       ),
     );
+  }
+
+  Widget _buildMobileBottomNavigation() {
+    const items = <({String label, IconData icon})>[
+      (label: 'Home', icon: Icons.home_outlined),
+      (label: 'My Post', icon: Icons.article_outlined),
+      (label: 'Messages', icon: Icons.chat_bubble_outline_rounded),
+      (label: 'Settings', icon: Icons.settings_outlined),
+    ];
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFFEFDFE),
+        border: Border(top: BorderSide(color: borderColor)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            children: items.map((item) {
+              final selected = selectedSidebarItem == item.label;
+              return Expanded(
+                child: InkWell(
+                  onTap: () => _selectSidebarItem(item.label),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: selected ? lavender : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          selected ? _selectedNavigationIcon(item.label) : item.icon,
+                          size: 21,
+                          color: purple,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: purple,
+                            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _selectedNavigationIcon(String label) {
+    switch (label) {
+      case 'Home':
+        return Icons.home_rounded;
+      case 'My Post':
+        return Icons.article_rounded;
+      case 'Messages':
+        return Icons.chat_bubble_rounded;
+      case 'Settings':
+        return Icons.settings_rounded;
+      default:
+        return Icons.home_rounded;
+    }
   }
 
   List<Widget> _sidebarItems({bool compact = false}) {
@@ -881,11 +978,6 @@ class _EditorPageState extends State<EditorPage>
   // ------------------------------------------------------------
 
   Widget _buildProfileSummary() {
-    return _emptyPanel(
-      'Profile details are unavailable while Firebase is disabled.',
-    );
-
-    /*
     final ref = _myUserDocument;
 
     if (ref == null) {
@@ -1059,7 +1151,6 @@ class _EditorPageState extends State<EditorPage>
         );
       },
     );
-    */
   }
 
   Widget _pill(String text, Color background, Color foreground) {
@@ -1663,11 +1754,9 @@ class _EditorPageState extends State<EditorPage>
             _settingTile(
               icon: Icons.email_outlined,
               title: 'Email address',
-              subtitle: 'Unavailable while Firebase is disabled',
+              subtitle: currentUser?.email ?? 'No email available',
               onTap: () {
-                _showMessage(
-                  'Email is unavailable while Firebase is disabled.',
-                );
+                _showMessage(currentUser?.email ?? 'No email available.');
               },
             ),
 
@@ -1698,13 +1787,23 @@ class _EditorPageState extends State<EditorPage>
                   fontSize: 14,
                 ),
               ),
-              subtitle: const Text(
-                'Manage your notification preference for this session',
-                style: TextStyle(color: secondaryText, fontSize: 12),
+              subtitle: Text(
+                _notificationError ??
+                    (_savingNotification
+                        ? 'Saving preference...'
+                        : 'Manage your notification preference'),
+                style: TextStyle(
+                  color: _notificationError == null
+                      ? secondaryText
+                      : Colors.red,
+                  fontSize: 12,
+                ),
               ),
               value: notificationsEnabled,
               activeThumbColor: purple,
-              onChanged: _saveNotificationPreference,
+              onChanged: _savingNotification
+                  ? null
+                  : _saveNotificationPreference,
             ),
 
             _settingTile(
