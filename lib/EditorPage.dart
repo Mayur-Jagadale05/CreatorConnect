@@ -318,7 +318,9 @@ class _EditorPageState extends State<EditorPage>
 
   @override
   Widget build(BuildContext context) {
-    final mobile = MediaQuery.sizeOf(context).width < 760;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final mobile = screenWidth < 760;
+    final showCompactSidebar = screenWidth >= 760 && screenWidth < 1100;
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -355,6 +357,34 @@ class _EditorPageState extends State<EditorPage>
                           controller: _dashboardScrollController,
                           padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
                           child: _buildSelectedPage(),
+                        );
+                      }
+
+                      if (showCompactSidebar) {
+                        return Column(
+                          children: [
+                            _buildCompactSidebar(),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                controller: _dashboardScrollController,
+                                padding: const EdgeInsets.fromLTRB(
+                                  14,
+                                  12,
+                                  28,
+                                  28,
+                                ),
+                                child: Center(
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 1400,
+                                    ),
+                                    child: _buildSelectedPage(),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         );
                       }
 
