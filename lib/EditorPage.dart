@@ -6,7 +6,6 @@ import 'package:creatorconnect/ProfileDetailsPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-
 class EditorPage extends StatefulWidget {
   const EditorPage({super.key});
 
@@ -630,7 +629,10 @@ class _EditorPageState extends State<EditorPage>
                   onTap: () => _selectSidebarItem(item.label),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: selected ? lavender : Colors.transparent,
                       borderRadius: BorderRadius.circular(12),
@@ -639,7 +641,9 @@ class _EditorPageState extends State<EditorPage>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          selected ? _selectedNavigationIcon(item.label) : item.icon,
+                          selected
+                              ? _selectedNavigationIcon(item.label)
+                              : item.icon,
                           size: 21,
                           color: purple,
                         ),
@@ -651,7 +655,9 @@ class _EditorPageState extends State<EditorPage>
                           style: TextStyle(
                             fontSize: 10,
                             color: purple,
-                            fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w500,
                           ),
                         ),
                       ],
