@@ -257,7 +257,7 @@ class _BusinessmanpageState extends State<Businessmanpage>
   Future<void> _openCreatorProfile(String uid) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => CreatorProfileDetailsPage(uid: uid)),
+      MaterialPageRoute(builder: (_) => ProfileDetailsPage()),
     );
   }
 
@@ -1490,8 +1490,9 @@ class _BusinessmanpageState extends State<Businessmanpage>
                   final photo = (item['photo'] ?? '').toString();
                   final location = (item['location'] ?? '').toString();
                   final bio = (item['bio'] ?? '').toString();
-                  final hasEducationVideo =
-                      (item['educationVideoUrl'] ?? '').toString().isNotEmpty;
+                  final hasEducationVideo = (item['educationVideoUrl'] ?? '')
+                      .toString()
+                      .isNotEmpty;
 
                   return Material(
                     color: Colors.transparent,
