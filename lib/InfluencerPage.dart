@@ -354,6 +354,7 @@ class _InfluencerPageState extends State<InfluencerPage>
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final compact = constraints.maxWidth < 760;
+                      final compactSidebar = constraints.maxWidth >= 760 && constraints.maxWidth < 1100;
 
                       if (compact) {
                         return Column(
@@ -374,7 +375,16 @@ class _InfluencerPageState extends State<InfluencerPage>
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          _buildSidebar(),
+                          if (compactSidebar)
+                            SizedBox(
+                              width: 220,
+                              child: Padding(
+                                padding: const EdgeInsets.fromLTRB(10, 8, 0, 18),
+                                child: _buildCompactSidebar(),
+                              ),
+                            )
+                          else
+                            _buildSidebar(),
 
                           Expanded(
                             child: SingleChildScrollView(
