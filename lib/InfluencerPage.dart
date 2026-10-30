@@ -357,10 +357,18 @@ class _InfluencerPageState extends State<InfluencerPage>
                       final compactSidebar = constraints.maxWidth >= 760 && constraints.maxWidth < 1100;
 
                       if (compact) {
-                        return SingleChildScrollView(
-                          controller: _dashboardScrollController,
-                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
-                          child: _buildSelectedPage(),
+                        return Column(
+                          children: [
+                            _buildCompactSidebar(),
+                            const SizedBox(height: 8),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                controller: _dashboardScrollController,
+                                padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+                                child: _buildSelectedPage(),
+                              ),
+                            ),
+                          ],
                         );
                       }
 
