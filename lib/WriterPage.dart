@@ -1,6 +1,11 @@
-// import 'package:cloud_firestore/cloud_firestore.dart';
-// import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'dart:ui' as ui;
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:creatorconnect/ProfileDetailsPage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 
 class Writerpage extends StatefulWidget {
   const Writerpage({super.key});
@@ -9,141 +14,190 @@ class Writerpage extends StatefulWidget {
   State<Writerpage> createState() => _WriterpageState();
 }
 
-class _WriterpageState extends State<Writerpage> {
+class _WriterpageState extends State<Writerpage>
+    with SingleTickerProviderStateMixin {
+  // ------------------------------------------------------------
+  // CREATORCONNECT DESIGN SYSTEM
+  // ------------------------------------------------------------
+
   static const Color purple = Color(0xFF35132F);
-  static const Color marigold = Color(0xFFF4C95D);
   static const Color pageBg = Color(0xFFF7F5F3);
-  static const Color lavender = Color(0xFFECE7F4);
+  static const Color iceSilver = Color(0xFFF0EDF0);
+  static const Color marigold = Color(0xFFF2D39A);
   static const Color primaryText = Color(0xFF302A33);
   static const Color secondaryText = Color(0xFF827985);
   static const Color borderColor = Color(0xCCFFFFFF);
+  static const Color lavender = Color(0xFFECE7F4);
 
-  String selectedTab = 'Influencer';
+  String selectedTab = 'writer';
   String selectedSidebarItem = 'Home';
+
   bool notificationsEnabled = true;
+  bool _savingNotification = false;
+  String? _notificationError;
+  bool _loadingCreators = true;
 
   final TextEditingController searchController = TextEditingController();
-  final GlobalKey _searchKey = GlobalKey();
   final PageController _heroPageController = PageController();
+  final ScrollController _dashboardScrollController = ScrollController();
+  final GlobalKey _searchSectionKey = GlobalKey();
+
+  Timer? _heroTimer;
   int _heroPageIndex = 0;
-  final List<String> _heroImages = const [
-    'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=1400',
-    'https://images.unsplash.com/photo-1497366811353-6870744d04b2?w=1400',
-    'https://images.unsplash.com/photo-1497215842964-222b430dc094?w=1400',
-  ];
-  final List<String> tabs = const [
-    'Influencer',
-    'Editor',
-    'Writer',
-    'Education',
+
+  List<Map<String, dynamic>> creators = [];
+
+  final List<String> tabs = const ['Influencer', 'Education'];
+
+  static const List<String> _heroImages = [
+    'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1492724441997-5dc865305da7?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=1800&q=85',
+    'https://images.unsplash.com/photo-1556761175-b413da4baf72?auto=format&fit=crop&w=1800&q=85',
   ];
 
-  final List<Map<String, dynamic>> creators = const [
-    {
-      'name': 'Maya Carter',
-      'username': 'mayacarter',
-      'role': 'Influencer',
-      'category': 'Influencer',
-      'bio': 'Lifestyle and travel storyteller.',
-      'location': 'New York',
-      'verified': true,
-    },
-    {
-      'name': 'Noah Williams',
-      'username': 'noahwrites',
-      'role': 'Writer',
-      'category': 'Writer',
-      'bio': 'Writer focused on culture and technology.',
-      'location': 'London',
-      'verified': false,
-    },
-    {
-      'name': 'Ava Thompson',
-      'username': 'avacreates',
-      'role': 'Editor',
-      'category': 'Editor',
-      'bio': 'Video editor and visual storyteller.',
-      'location': 'Los Angeles',
-      'verified': true,
-    },
-    {
-      'name': 'Liam Patel',
-      'username': 'learnwithliam',
-      'role': 'Education',
-      'category': 'Education',
-      'bio': 'Educator creating accessible learning content.',
-      'location': 'Toronto',
-      'verified': false,
-    },
-  ];
-
-  /*
   User? get currentUser => FirebaseAuth.instance.currentUser;
 
   DocumentReference<Map<String, dynamic>>? get _myUserDocument {
     final user = currentUser;
     if (user == null) return null;
+
     return FirebaseFirestore.instance.collection('users').doc(user.uid);
   }
-  */
 
   @override
   void initState() {
     super.initState();
-    // Firebase-backed settings are disabled.
+
+    _loadNotificationPreference();
+    _loadCreators();
+
+    _heroTimer = Timer.periodic(const Duration(seconds: 6), (_) {
+      if (mounted && selectedSidebarItem == 'Home') {
+        _advanceHeroBackground();
+      }
+    });
   }
 
   @override
   void dispose() {
-    searchController.dispose();
+    _heroTimer?.cancel();
     _heroPageController.dispose();
+    _dashboardScrollController.dispose();
+    searchController.dispose();
     super.dispose();
   }
 
-  void _advanceHeroBackground() {
-    if (!_heroPageController.hasClients || _heroImages.isEmpty) return;
-    final nextIndex = (_heroPageIndex + 1) % _heroImages.length;
-    _heroPageController.animateToPage(
-      nextIndex,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeInOut,
-    );
+  // ------------------------------------------------------------
+  // FIRESTORE: LOAD CREATORS
+  // ------------------------------------------------------------
+
+  Future<void> _loadCreators() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .get();
+
+      final uid = currentUser?.uid;
+
+      if (!mounted) return;
+
+      setState(() {
+        creators = snapshot.docs.where((doc) => doc.id != uid).map((doc) {
+          final data = doc.data();
+
+          return <String, dynamic>{
+            'uid': doc.id,
+            'name': data['fullName'] ?? data['username'] ?? 'Creator',
+            'username': data['username'] ?? '',
+            'role': data['role'] ?? 'Creator',
+            'category': data['category'] ?? '',
+            'location': data['location'] ?? '',
+            'photo': data['profilePhotoUrl'] ?? '',
+            'bio': data['bio'] ?? '',
+            'verified': data['verified'] == true,
+          };
+        }).toList();
+
+        _loadingCreators = false;
+      });
+    } catch (error) {
+      debugPrint('Unable to load creators: $error');
+
+      if (!mounted) return;
+
+      setState(() => _loadingCreators = false);
+      _showMessage('Unable to load creators. Please try again.');
+    }
   }
 
-  void _scrollToSearch() {
-    final searchContext = _searchKey.currentContext;
-    if (searchContext == null) return;
-    Scrollable.ensureVisible(
-      searchContext,
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeInOut,
-    );
-  }
+  // ------------------------------------------------------------
+  // NOTIFICATION SETTINGS
+  // ------------------------------------------------------------
 
-  /*
   Future<void> _loadNotificationPreference() async {
     final ref = _myUserDocument;
     if (ref == null) return;
+
     try {
       final snapshot = await ref.get();
+
       if (!mounted) return;
+
       setState(() {
         notificationsEnabled =
             snapshot.data()?['notificationsEnabled'] as bool? ?? true;
       });
-    } catch (e) {
-      debugPrint('Could not load notification preference: $e');
+    } catch (error) {
+      debugPrint('Notification preference error: $error');
     }
   }
-  */
 
-  void _saveNotificationPreference(bool value) {
-    setState(() => notificationsEnabled = value);
-    _showMessage('Preference updated for this session only.');
+  Future<void> _saveNotificationPreference(bool value) async {
+    final ref = _myUserDocument;
+
+    if (ref == null) {
+      _showMessage('Please log in to change settings.');
+      return;
+    }
+
+    setState(() {
+      _savingNotification = true;
+      _notificationError = null;
+    });
+
+    try {
+      await ref.set({
+        'notificationsEnabled': value,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (!mounted) return;
+
+      setState(() => notificationsEnabled = value);
+      _showMessage('Notification preference saved.');
+    } catch (error) {
+      debugPrint('Save notification error: $error');
+
+      if (!mounted) return;
+
+      setState(() {
+        _notificationError = 'Could not save notification preference.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _savingNotification = false);
+      }
+    }
   }
+
+  // ------------------------------------------------------------
+  // COMMON HELPERS
+  // ------------------------------------------------------------
 
   void _showMessage(String message) {
     if (!mounted) return;
+
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -158,48 +212,117 @@ class _WriterpageState extends State<Writerpage> {
       );
   }
 
-  void _selectSidebarItem(String item) {
-    setState(() => selectedSidebarItem = item);
-  }
+  Future<void> _openProfile() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ProfileDetailsPage()),
+    );
 
-  void _openProfile() {
-    _showMessage('Profile editing is unavailable while Firebase is disabled.');
-  }
-
-  void _resetPassword() {
-    _showMessage('Password reset is unavailable while Firebase is disabled.');
+    if (mounted) {
+      _loadCreators();
+    }
   }
 
   Future<void> _logout() async {
-    final confirm = await showDialog<bool>(
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: pageBg,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        title: const Text('Log out?'),
-        content: const Text(
-          'Are you sure you want to sign out of CreatorConnect?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Log out'),
-          ),
-        ],
-      ),
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: pageBg,
+          title: const Text('Log out?'),
+          content: const Text('Are you sure you want to sign out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: purple,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Log out'),
+            ),
+          ],
+        );
+      },
     );
-    if (confirm != true) return;
-    _showMessage('Sign-out is unavailable while Firebase is disabled.');
+
+    if (confirmed != true) return;
+
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (error) {
+      debugPrint('Logout error: $error');
+      _showMessage('Logout failed. Please try again.');
+    }
   }
+
+  Future<void> _resetPassword() async {
+    final email = currentUser?.email;
+
+    if (email == null || email.isEmpty) {
+      _showMessage('No email address is available.');
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+
+      _showMessage('Password reset email sent to $email');
+    } on FirebaseAuthException catch (error) {
+      _showMessage(error.message ?? 'Unable to send reset email.');
+    }
+  }
+
+  void _selectSidebarItem(String item) {
+    setState(() => selectedSidebarItem = item);
+
+    if (item == 'Home') {
+      _dashboardScrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  void _advanceHeroBackground() {
+    if (!_heroPageController.hasClients) return;
+
+    final nextIndex = (_heroPageIndex + 1) % _heroImages.length;
+
+    _heroPageController.animateToPage(
+      nextIndex,
+      duration: const Duration(milliseconds: 650),
+      curve: Curves.easeInOutCubic,
+    );
+  }
+
+  Future<void> _scrollToSearch() async {
+    final searchContext = _searchSectionKey.currentContext;
+    if (searchContext == null) return;
+
+    await Scrollable.ensureVisible(
+      searchContext,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutCubic,
+      alignment: 0.08,
+    );
+  }
+
+  // ------------------------------------------------------------
+  // ROOT LAYOUT
+  // ------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
+    final mobile = MediaQuery.sizeOf(context).width < 760;
+
     return Scaffold(
       backgroundColor: pageBg,
+      bottomNavigationBar: mobile ? _buildMobileBottomNavigation() : null,
       body: Stack(
         children: [
           const Positioned.fill(
@@ -209,29 +332,29 @@ class _WriterpageState extends State<Writerpage> {
               filterQuality: FilterQuality.high,
             ),
           ),
+
+          // Soft neutral overlay keeps the background subtle.
           Positioned.fill(
-            child: ColoredBox(color: pageBg.withValues(alpha: 0.48)),
+            child: IgnorePointer(
+              child: ColoredBox(color: pageBg.withValues(alpha: 0.48)),
+            ),
           ),
+
           SafeArea(
             child: Column(
               children: [
                 _buildTopBar(),
+
                 Expanded(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final compact = constraints.maxWidth < 760;
 
                       if (compact) {
-                        return Column(
-                          children: [
-                            _buildCompactSidebar(),
-                            Expanded(
-                              child: SingleChildScrollView(
-                                padding: const EdgeInsets.all(12),
-                                child: _buildSelectedPage(),
-                              ),
-                            ),
-                          ],
+                        return SingleChildScrollView(
+                          controller: _dashboardScrollController,
+                          padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
+                          child: _buildSelectedPage(),
                         );
                       }
 
@@ -239,10 +362,24 @@ class _WriterpageState extends State<Writerpage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           _buildSidebar(),
+
                           Expanded(
                             child: SingleChildScrollView(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                              child: _buildSelectedPage(),
+                              controller: _dashboardScrollController,
+                              padding: const EdgeInsets.fromLTRB(
+                                14,
+                                12,
+                                28,
+                                28,
+                              ),
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 1400,
+                                  ),
+                                  child: _buildSelectedPage(),
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -258,83 +395,128 @@ class _WriterpageState extends State<Writerpage> {
     );
   }
 
-  Widget _buildTopBar() {
+  // ------------------------------------------------------------
+  // GLASS PANEL
+  // ------------------------------------------------------------
+
+  Widget _glassPanel({
+    required Widget child,
+    EdgeInsetsGeometry? margin,
+    double radius = 22,
+    Color color = const Color(0xDDF9F6F5),
+  }) {
     return Container(
-      height: 72,
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-      padding: const EdgeInsets.symmetric(horizontal: 18),
+      margin: margin,
       decoration: BoxDecoration(
-        color: const Color(0xF7FFFFFF),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE8E0E6)),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.88),
+          width: 1.1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: purple.withValues(alpha: 0.06),
+            color: purple.withValues(alpha: 0.045),
             blurRadius: 24,
-            offset: const Offset(0, 6),
+            offset: const Offset(0, 9),
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: purple,
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              color: Colors.white,
-              size: 25,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'CreatorConnect',
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w800,
-                color: purple,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
-          if (MediaQuery.sizeOf(context).width > 650)
-            const Padding(
-              padding: EdgeInsets.only(right: 18),
-              child: Text(
-                'A COMMUNITY FOR CREATIVE WORK',
-                style: TextStyle(
-                  fontSize: 10,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w800,
-                  color: secondaryText,
-                ),
-              ),
-            ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFEDE5EB)),
-            ),
-            child: IconButton(
-              tooltip: 'Notifications',
-              onPressed: () => _showMessage(
-                notificationsEnabled
-                    ? 'In-app notification preference is enabled.'
-                    : 'In-app notification preference is disabled.',
-              ),
-              icon: const Icon(Icons.notifications_none_rounded, color: purple),
-            ),
-          ),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: Container(color: color, child: child),
+        ),
       ),
     );
   }
+
+  // ------------------------------------------------------------
+  // TOP BAR
+  // ------------------------------------------------------------
+
+  Widget _buildTopBar() {
+    return _glassPanel(
+      margin: const EdgeInsets.fromLTRB(22, 8, 22, 8),
+      radius: 24,
+      color: const Color(0xDDF9F6F5),
+      child: SizedBox(
+        height: 66,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: purple,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 23,
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              const Expanded(
+                child: Text(
+                  'CreatorConnect',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Georgia',
+                    fontSize: 23,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.6,
+                    color: purple,
+                  ),
+                ),
+              ),
+
+              if (MediaQuery.sizeOf(context).width > 580)
+                const Padding(
+                  padding: EdgeInsets.only(right: 16),
+                  child: Text(
+                    'A COMMUNITY FOR CREATIVE WORK',
+                    style: TextStyle(
+                      color: secondaryText,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+
+              IconButton(
+                tooltip: 'Notifications',
+                onPressed: () {
+                  _showMessage(
+                    notificationsEnabled
+                        ? 'Notifications are enabled.'
+                        : 'Notifications are disabled.',
+                  );
+                },
+                style: IconButton.styleFrom(
+                  foregroundColor: purple,
+                  backgroundColor: Colors.white.withValues(alpha: 0.65),
+                  shape: const CircleBorder(),
+                ),
+                icon: const Icon(Icons.notifications_none_rounded),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // SIDEBAR
+  // ------------------------------------------------------------
 
   Widget _buildSidebar() {
     return Container(
@@ -372,51 +554,92 @@ class _WriterpageState extends State<Writerpage> {
           ..._sidebarItems(),
 
           const Spacer(),
-
-          Container(
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: lavender.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.eco_outlined, color: purple, size: 20),
-                SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    'Make something\nmeaningful.',
-                    style: TextStyle(
-                      color: purple,
-                      fontSize: 12,
-                      height: 1.4,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildCompactSidebar() {
+  Widget _buildMobileBottomNavigation() {
+    const items = <({String label, IconData icon})>[
+      (label: 'Home', icon: Icons.home_outlined),
+      (label: 'My Post', icon: Icons.article_outlined),
+      (label: 'Messages', icon: Icons.chat_bubble_outline_rounded),
+      (label: 'Settings', icon: Icons.settings_outlined),
+    ];
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12),
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: const Color(0xDDF9F6F5),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFEFDFE),
+        border: Border(top: BorderSide(color: borderColor)),
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(children: _sidebarItems(compact: true)),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            children: items.map((item) {
+              final selected = selectedSidebarItem == item.label;
+              return Expanded(
+                child: InkWell(
+                  onTap: () => _selectSidebarItem(item.label),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 5,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected ? lavender : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          selected
+                              ? _selectedNavigationIcon(item.label)
+                              : item.icon,
+                          size: 21,
+                          color: purple,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: purple,
+                            fontWeight: selected
+                                ? FontWeight.w800
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
       ),
     );
+  }
+
+  IconData _selectedNavigationIcon(String label) {
+    switch (label) {
+      case 'Home':
+        return Icons.home_rounded;
+      case 'My Post':
+        return Icons.article_rounded;
+      case 'Messages':
+        return Icons.chat_bubble_rounded;
+      case 'Settings':
+        return Icons.settings_rounded;
+      default:
+        return Icons.home_rounded;
+    }
   }
 
   List<Widget> _sidebarItems({bool compact = false}) {
@@ -746,11 +969,6 @@ class _WriterpageState extends State<Writerpage> {
   // ------------------------------------------------------------
 
   Widget _buildProfileSummary() {
-    return _emptyPanel(
-      'Profile details are unavailable while Firebase is disabled.',
-    );
-
-    /*
     final ref = _myUserDocument;
 
     if (ref == null) {
@@ -924,7 +1142,6 @@ class _WriterpageState extends State<Writerpage> {
         );
       },
     );
-    */
   }
 
   Widget _pill(String text, Color background, Color foreground) {
@@ -942,30 +1159,6 @@ class _WriterpageState extends State<Writerpage> {
           fontWeight: FontWeight.w700,
         ),
       ),
-    );
-  }
-
-  Widget _glassPanel({
-    required Widget child,
-    EdgeInsetsGeometry margin = EdgeInsets.zero,
-    double radius = 18,
-    Color color = const Color(0xDDF9F6F5),
-  }) {
-    return Container(
-      margin: margin,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: purple.withValues(alpha: 0.045),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: child,
     );
   }
 
@@ -1079,7 +1272,7 @@ class _WriterpageState extends State<Writerpage> {
 
   Widget _buildSearch() {
     return Container(
-      key: _searchKey,
+      key: _searchSectionKey,
       decoration: BoxDecoration(
         color: const Color(0xDDF9F6F5),
         borderRadius: BorderRadius.circular(19),
@@ -1206,7 +1399,17 @@ class _WriterpageState extends State<Writerpage> {
 
             const SizedBox(height: 18),
 
-            if (filteredCreators.isEmpty)
+            if (_loadingCreators)
+              const Padding(
+                padding: EdgeInsets.all(28),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: purple,
+                    strokeWidth: 2,
+                  ),
+                ),
+              )
+            else if (filteredCreators.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 30),
                 child: Center(
@@ -1542,11 +1745,9 @@ class _WriterpageState extends State<Writerpage> {
             _settingTile(
               icon: Icons.email_outlined,
               title: 'Email address',
-              subtitle: 'Unavailable while Firebase is disabled',
+              subtitle: currentUser?.email ?? 'No email available',
               onTap: () {
-                _showMessage(
-                  'Email is unavailable while Firebase is disabled.',
-                );
+                _showMessage(currentUser?.email ?? 'No email available.');
               },
             ),
 
@@ -1577,13 +1778,23 @@ class _WriterpageState extends State<Writerpage> {
                   fontSize: 14,
                 ),
               ),
-              subtitle: const Text(
-                'Manage your notification preference for this session',
-                style: TextStyle(color: secondaryText, fontSize: 12),
+              subtitle: Text(
+                _notificationError ??
+                    (_savingNotification
+                        ? 'Saving preference...'
+                        : 'Manage your notification preference'),
+                style: TextStyle(
+                  color: _notificationError == null
+                      ? secondaryText
+                      : Colors.red,
+                  fontSize: 12,
+                ),
               ),
               value: notificationsEnabled,
               activeThumbColor: purple,
-              onChanged: _saveNotificationPreference,
+              onChanged: _savingNotification
+                  ? null
+                  : _saveNotificationPreference,
             ),
 
             _settingTile(
