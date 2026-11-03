@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:creatorconnect/Loginpage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,20 +13,26 @@ class Registerpage extends StatefulWidget {
 }
 
 class _RegisteraccountState extends State<Registerpage> {
-  // Password visibility toggles
+  // Password visibility
   bool _obscureConfirmPassword = true;
+
+  // Loading state
+  bool isLoading = false;
 
   // Form validation key
   final _formkey = GlobalKey<FormState>();
 
   // Text controllers
   final TextEditingController fullnamecontroller = TextEditingController();
+
   final TextEditingController emailcontroller = TextEditingController();
+
   final TextEditingController passwordcontroller = TextEditingController();
+
   final TextEditingController confirmpasswordcontroller =
       TextEditingController();
 
-  // Selected user role
+  // Selected role
   String? selectedRole;
 
   // CreatorConnect theme colors
@@ -34,102 +41,165 @@ class _RegisteraccountState extends State<Registerpage> {
   static const Color borderColor = Color(0xCCFFFFFF);
   static const Color subtitleColor = Color(0xFF827985);
 
-  // Create account using Firebase Authentication
+  // --------------------------------------------------
+  // CREATE ACCOUNT
+  // --------------------------------------------------
+
   Future<void> createaccount() async {
-    // Validate all form fields
+    if (isLoading) return;
+
     final formState = _formkey.currentState;
+
     if (formState == null || !formState.validate()) {
       return;
     }
 
     final role = selectedRole;
+
     if (role == null) {
       return;
     }
 
+    setState(() {
+      isLoading = true;
+    });
+
     try {
-      // Create a new Firebase Authentication account
-      UserCredential userCredential = await FirebaseAuth.instance
+      // STEP 1: Create Firebase Authentication account
+
+      final UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: emailcontroller.text.trim(),
             password: passwordcontroller.text.trim(),
           );
 
-      // Get the unique Firebase user ID
-      final user = userCredential.user;
-      if (user == null) {
-        throw StateError('Firebase did not return a user after registration.');
-      }
-      final uid = user.uid;
+      final User? user = userCredential.user;
 
-      // Save user details and selected role in Firestore
-      await FirebaseFirestore.instance.collection("users").doc(uid).set({
-        "uid": uid,
-        "email": emailcontroller.text.trim(),
-        "fullName": fullnamecontroller.text.trim(),
-        "role": role,
-      });
+      if (user == null) {
+        throw Exception('Firebase user not found.');
+      }
+
+      final String uid = user.uid;
+
+      // STEP 2: Save user information in Firestore Profile_Data collection
+      final userData = {
+        'uid': uid,
+        'email': emailcontroller.text.trim(),
+        'fullName': fullnamecontroller.text.trim(),
+        'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      final DocumentReference profileDocument = FirebaseFirestore.instance
+          .collection('Profile_Data')
+          .doc(uid);
+
+      await profileDocument.set(userData, SetOptions(merge: true));
+
+      // STEP 3: Verify Firestore document in Profile_Data collection
+      final DocumentSnapshot savedDocument = await profileDocument.get();
+
+      if (!savedDocument.exists) {
+        throw Exception('User data was not saved in Firestore.');
+      }
+
+      // Explicitly sign out so user returns to clean Login state
+      await FirebaseAuth.instance.signOut();
 
       if (!mounted) return;
 
-      // Show success message
+      // STEP 4: Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Account created successfully"),
+          content: Text('Account created successfully! Please log in.'),
           backgroundColor: purple,
           behavior: SnackBarBehavior.floating,
         ),
       );
 
-      // Navigate to Login page
+      // STEP 5: Navigate to Login page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Loginpage()),
       );
-    } on FirebaseAuthException catch (e) {
+    }
+    // Firebase Authentication errors
+    on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
-      // Handle Firebase authentication errors
       String errorMessage;
 
       switch (e.code) {
         case 'email-already-in-use':
           errorMessage = 'This email is already registered.';
           break;
+
         case 'invalid-email':
           errorMessage = 'Please enter a valid email address.';
           break;
+
         case 'weak-password':
           errorMessage = 'Password is too weak.';
           break;
+
         case 'operation-not-allowed':
           errorMessage = 'Email/password authentication is not enabled.';
           break;
+
+        case 'network-request-failed':
+          errorMessage = 'Please check your internet connection.';
+          break;
+
         default:
-          errorMessage = e.message ?? 'Registration failed.';
+          errorMessage = e.message ?? 'Registration failed: ${e.code}';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
-          backgroundColor: purple,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      // Show a general error if registration fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong. Please try again.'),
+          backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
+    // Firestore errors
+    on FirebaseException catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Firestore Error: ${e.code}\n${e.message ?? ''}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    }
+    // Other errors
+    catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    }
   }
 
-  // Common decoration for all input fields
+  // --------------------------------------------------
+  // FIELD DECORATION
+  // --------------------------------------------------
+
   InputDecoration fieldDecoration({
     required String label,
     required String hint,
@@ -157,7 +227,10 @@ class _RegisteraccountState extends State<Registerpage> {
     );
   }
 
-  // Release controllers when the page is removed
+  // --------------------------------------------------
+  // DISPOSE
+  // --------------------------------------------------
+
   @override
   void dispose() {
     fullnamecontroller.dispose();
@@ -167,22 +240,30 @@ class _RegisteraccountState extends State<Registerpage> {
     super.dispose();
   }
 
+  // --------------------------------------------------
+  // BUILD
+  // --------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          const Positioned.fill(
-            child: Image(
-              image: AssetImage('assets/images/creatorconnect_background.png'),
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/creatorconnect_background.png',
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
             ),
           ),
+
           Positioned.fill(
             child: ColoredBox(color: pageBg.withValues(alpha: 0.48)),
           ),
+
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -202,11 +283,15 @@ class _RegisteraccountState extends State<Registerpage> {
     );
   }
 
+  // --------------------------------------------------
+  // REGISTRATION FORM
+  // --------------------------------------------------
+
   Widget _buildRegistrationForm() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // CreatorConnect logo
+        // Logo
         Container(
           height: 65,
           width: 65,
@@ -225,7 +310,7 @@ class _RegisteraccountState extends State<Registerpage> {
 
         // App name
         const Text(
-          "CreatorConnect",
+          'CreatorConnect',
           style: TextStyle(
             fontFamily: 'Georgia',
             fontSize: 28,
@@ -236,112 +321,117 @@ class _RegisteraccountState extends State<Registerpage> {
 
         const SizedBox(height: 8),
 
-        // Welcome message
         const Text(
-          "Create your account and connect!",
+          'Create your account and connect!',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: subtitleColor),
         ),
 
         const SizedBox(height: 25),
 
-        // First name field
+        // Full Name
         TextFormField(
           controller: fullnamecontroller,
           textCapitalization: TextCapitalization.words,
+          enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return "Please enter your full name";
+              return 'Please enter your full name';
             }
             return null;
           },
           decoration: fieldDecoration(
-            label: "Full Name",
-            hint: "Enter your Full name",
+            label: 'Full Name',
+            hint: 'Enter your Full name',
             icon: Icons.person_outline,
           ),
         ),
 
         const SizedBox(height: 18),
 
-        // Email field
+        // Email
         TextFormField(
           controller: emailcontroller,
           keyboardType: TextInputType.emailAddress,
+          enabled: !isLoading,
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return "Please enter your email";
+              return 'Please enter your email';
             }
 
             if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim())) {
-              return "Enter a valid email";
+              return 'Enter a valid email';
             }
 
             return null;
           },
           decoration: fieldDecoration(
-            label: "Email",
-            hint: "Enter your email",
+            label: 'Email',
+            hint: 'Enter your email',
             icon: Icons.email_outlined,
           ),
         ),
 
         const SizedBox(height: 18),
 
-        // Password field
+        // Password
         TextFormField(
           controller: passwordcontroller,
           obscureText: true,
+          enabled: !isLoading,
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return "Please enter your password";
+              return 'Please enter your password';
             }
 
             if (value.length < 6) {
-              return "Password must be at least 6 characters";
+              return 'Password must be at least 6 characters';
             }
 
             return null;
           },
           decoration: fieldDecoration(
-            label: "Password",
-            hint: "Enter your password",
+            label: 'Password',
+            hint: 'Enter your password',
             icon: Icons.lock_outline,
           ),
         ),
 
         const SizedBox(height: 18),
 
-        // Confirm password field
+        // Confirm Password
         TextFormField(
           controller: confirmpasswordcontroller,
           obscureText: _obscureConfirmPassword,
+          enabled: !isLoading,
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return "Please confirm your password";
+              return 'Please confirm your password';
             }
 
             if (value != passwordcontroller.text) {
-              return "Passwords do not match";
+              return 'Passwords do not match';
             }
 
             return null;
           },
           decoration:
               fieldDecoration(
-                label: "Confirm Password",
-                hint: "Re-enter your password",
+                label: 'Confirm Password',
+                hint: 'Re-enter your password',
                 icon: Icons.lock_outline,
               ).copyWith(
                 suffixIcon: IconButton(
                   tooltip: _obscureConfirmPassword
-                      ? "Show password"
-                      : "Hide password",
-                  onPressed: () {
-                    setState(() {
-                      _obscureConfirmPassword = !_obscureConfirmPassword;
-                    });
-                  },
+                      ? 'Show password'
+                      : 'Hide password',
+                  onPressed: isLoading
+                      ? null
+                      : () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
                   icon: Icon(
                     _obscureConfirmPassword
                         ? Icons.visibility_outlined
@@ -351,7 +441,9 @@ class _RegisteraccountState extends State<Registerpage> {
                 ),
               ),
         ),
+
         const SizedBox(height: 25),
+
         // Role dropdown
         DropdownButtonFormField<String>(
           initialValue: selectedRole,
@@ -362,20 +454,22 @@ class _RegisteraccountState extends State<Registerpage> {
             DropdownMenuItem(value: 'Editor', child: Text('Editor')),
             DropdownMenuItem(value: 'Writer', child: Text('Writer')),
           ],
-          onChanged: (value) {
-            setState(() {
-              selectedRole = value;
-            });
-          },
+          onChanged: isLoading
+              ? null
+              : (value) {
+                  setState(() {
+                    selectedRole = value;
+                  });
+                },
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return "Please select your role";
+              return 'Please select your role';
             }
             return null;
           },
           decoration: fieldDecoration(
-            label: "Enter your role",
-            hint: "Select your role",
+            label: 'Enter your role',
+            hint: 'Select your role',
             icon: Icons.work_outline,
           ),
           dropdownColor: Colors.white,
@@ -385,48 +479,62 @@ class _RegisteraccountState extends State<Registerpage> {
 
         const SizedBox(height: 18),
 
-        // Create account button
+        // Create Account Button
         SizedBox(
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: createaccount,
+            onPressed: isLoading ? null : createaccount,
             style: ElevatedButton.styleFrom(
               backgroundColor: purple,
               foregroundColor: Colors.white,
+              disabledBackgroundColor: purple.withValues(alpha: 0.6),
               elevation: 0,
               shadowColor: purple.withValues(alpha: 0.22),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(15),
               ),
             ),
-            child: const Text(
-              "Create Account",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    height: 23,
+                    width: 23,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : const Text(
+                    'Create Account',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
           ),
         ),
 
         const SizedBox(height: 20),
 
-        // Navigate to Login page
+        // Login Navigation
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             const Text(
-              "Already have an account?",
+              'Already have an account?',
               style: TextStyle(color: subtitleColor),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (context) => const Loginpage()),
-                );
-              },
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const Loginpage(),
+                        ),
+                      );
+                    },
               child: const Text(
-                "Login",
+                'Login',
                 style: TextStyle(color: purple, fontWeight: FontWeight.bold),
               ),
             ),
@@ -437,15 +545,15 @@ class _RegisteraccountState extends State<Registerpage> {
   }
 }
 
+// --------------------------------------------------
+// GLASS PANEL
+// --------------------------------------------------
+
 class GlassPanel extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Widget child;
 
-  const GlassPanel({
-    super.key,
-    this.padding,
-    required this.child,
-  });
+  const GlassPanel({super.key, this.padding, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -470,10 +578,7 @@ class GlassPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.82),
               borderRadius: BorderRadius.circular(32),
-              border: Border.all(
-                color: const Color(0xCCFFFFFF),
-                width: 1.2,
-              ),
+              border: Border.all(color: const Color(0xCCFFFFFF), width: 1.2),
             ),
             child: child,
           ),

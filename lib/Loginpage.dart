@@ -65,14 +65,57 @@ class _LoginpageState extends State<Loginpage> {
 
       signedIn = true;
 
-      final document = await FirebaseFirestore.instance
-          .collection('users')
+      // Ensure fresh auth token
+      try {
+        await user.getIdToken(true);
+      } catch (_) {}
+
+      // 2. Fetch user's Firestore document from 'Profile_Data' collection
+      DocumentSnapshot<Map<String, dynamic>>? document;
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('Profile_Data')
+            .doc(user.uid)
+            .get();
+        if (doc.exists && doc.data() != null && doc.data()?['role'] != null) {
+          document = doc;
+        }
+      } catch (e) {
+        debugPrint('Login Profile_Data read warning: $e');
+      }
+
+      // Legacy fallback: check 'users' collection and migrate into 'Profile_Data'
+      if (document == null) {
+        try {
+          final legacyDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+          if (legacyDoc.exists && legacyDoc.data() != null) {
+            try {
+              await FirebaseFirestore.instance
+                  .collection('Profile_Data')
+                  .doc(user.uid)
+                  .set(legacyDoc.data()!, SetOptions(merge: true));
+            } catch (_) {}
+
+            document = legacyDoc;
+          }
+        } catch (e) {
+          debugPrint('Login legacy users read warning: $e');
+        }
+      }
+
+      // If neither had role, do one last direct fetch on Profile_Data
+      document ??= await FirebaseFirestore.instance
+          .collection('Profile_Data')
           .doc(user.uid)
           .get();
 
       if (!document.exists) {
         throw Exception(
-          'Your user profile was not found in Firebase Firestore.',
+          'Your user profile was not found in Firestore. Please register.',
         );
       }
 
@@ -80,13 +123,27 @@ class _LoginpageState extends State<Loginpage> {
       final savedRole = data?['role']?.toString().trim();
 
       if (savedRole == null || savedRole.isEmpty) {
-        throw Exception('Role is missing from your Firebase profile.');
+        throw Exception('Role is missing from your Firestore profile.');
       }
 
-      if (savedRole.toLowerCase() != selectedRole!.trim().toLowerCase()) {
+      // Check for valid role names strictly
+      const validRoles = {'Influencer', 'Editor', 'Writer', 'Businessman'};
+      final matchedRole = validRoles.firstWhere(
+        (r) => r.toLowerCase() == savedRole.toLowerCase(),
+        orElse: () => '',
+      );
+
+      if (matchedRole.isEmpty) {
+        throw Exception(
+          'Invalid role "$savedRole" in Firestore. Allowed roles: Influencer, Editor, Writer, Businessman.',
+        );
+      }
+
+      // Ensure that users cannot access another role's dashboard by changing selected login role
+      if (matchedRole.toLowerCase() != selectedRole!.trim().toLowerCase()) {
         throw Exception(
           'Role mismatch! You selected "$selectedRole", '
-          'but your Firebase role is "$savedRole".',
+          'but your registered role in Firestore is "$savedRole".',
         );
       }
 
@@ -186,14 +243,18 @@ class _LoginpageState extends State<Loginpage> {
       backgroundColor: pageBg,
       body: Stack(
         children: [
-          const Positioned.fill(
-            child: Image(
-              image: AssetImage('assets/images/creatorconnect_background.png'),
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/creatorconnect_background.png',
               fit: BoxFit.cover,
               filterQuality: FilterQuality.high,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
             ),
           ),
-          Positioned.fill(child: ColoredBox(color: pageBg.withOpacity(0.48))),
+          Positioned.fill(
+            child: ColoredBox(color: pageBg.withValues(alpha: 0.48)),
+          ),
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -207,12 +268,12 @@ class _LoginpageState extends State<Loginpage> {
                       vertical: 36,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.82),
+                      color: Colors.white.withValues(alpha: 0.82),
                       borderRadius: BorderRadius.circular(32),
                       border: Border.all(color: borderColor, width: 1.2),
                       boxShadow: [
                         BoxShadow(
-                          color: purple.withOpacity(0.12),
+                          color: purple.withValues(alpha: 0.12),
                           blurRadius: 30,
                           offset: const Offset(0, 14),
                         ),

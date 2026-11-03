@@ -190,17 +190,18 @@ class _AmbientBackgroundState extends State<AmbientBackground>
         return Stack(
           children: [
             Positioned.fill(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFFFFFCFA),
-                      Color(0xFFF0EDF0),
-                      Color(0xFFF7F5F3),
-                    ],
-                  ),
+              child: Image.asset(
+                'assets/images/creatorconnect_background.png',
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.high,
+                errorBuilder: (context, error, stackTrace) =>
+                    const SizedBox.shrink(),
+              ),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: ColoredBox(
+                  color: const Color(0xFFF7F5F3).withValues(alpha: 0.48),
                 ),
               ),
             ),
