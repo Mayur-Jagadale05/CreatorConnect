@@ -1,115 +1,10 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:creatorconnect/models/connection_request_model.dart';
 import 'package:creatorconnect/services/chat_service.dart';
 import 'package:flutter/foundation.dart';
 
-enum ConnectionStatus {
-  none,
-  pendingSent,
-  pendingReceived,
-  connected,
-  rejected,
-}
-
-class ConnectionRequest {
-  final String requestId;
-  final String senderUid;
-  final String senderName;
-  final String senderUsername;
-  final String senderEmail;
-  final String senderRole;
-  final String senderProfilePhoto;
-  final String receiverUid;
-  final String receiverName;
-  final String receiverUsername;
-  final String receiverRole;
-  final String receiverProfilePhoto;
-  final String status; // 'pending' | 'accepted' | 'rejected'
-  final bool isRead;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
-
-  // Interoperability getters
-  String get senderProfileImage => senderProfilePhoto;
-  String get receiverProfileImage => receiverProfilePhoto;
-
-  ConnectionRequest({
-    required this.requestId,
-    required this.senderUid,
-    required this.senderName,
-    required this.senderUsername,
-    required this.senderEmail,
-    required this.senderRole,
-    required this.senderProfilePhoto,
-    required this.receiverUid,
-    required this.receiverName,
-    required this.receiverUsername,
-    required this.receiverRole,
-    required this.receiverProfilePhoto,
-    required this.status,
-    this.isRead = false,
-    this.createdAt,
-    this.updatedAt,
-  });
-
-  factory ConnectionRequest.fromFirestore(
-    DocumentSnapshot<Map<String, dynamic>> doc,
-  ) {
-    final data = doc.data() ?? {};
-    final senderPhoto = (data['senderProfileImage'] ??
-            data['senderProfilePhoto'] ??
-            '')
-        .toString();
-    final receiverPhoto = (data['receiverProfileImage'] ??
-            data['receiverProfilePhoto'] ??
-            '')
-        .toString();
-
-    return ConnectionRequest(
-      requestId: doc.id,
-      senderUid: data['senderUid']?.toString() ?? '',
-      senderName: data['senderName']?.toString() ?? 'Creator',
-      senderUsername: data['senderUsername']?.toString() ?? '',
-      senderEmail: data['senderEmail']?.toString() ?? '',
-      senderRole: data['senderRole']?.toString() ?? 'Creator',
-      senderProfilePhoto: senderPhoto,
-      receiverUid: data['receiverUid']?.toString() ?? '',
-      receiverName: data['receiverName']?.toString() ?? 'Creator',
-      receiverUsername: data['receiverUsername']?.toString() ?? '',
-      receiverRole: data['receiverRole']?.toString() ?? 'Creator',
-      receiverProfilePhoto: receiverPhoto,
-      status: data['status']?.toString() ?? 'pending',
-      isRead: data['isRead'] == true,
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'requestId': requestId,
-      'senderUid': senderUid,
-      'senderName': senderName,
-      'senderUsername': senderUsername,
-      'senderEmail': senderEmail,
-      'senderRole': senderRole,
-      'senderProfilePhoto': senderProfilePhoto,
-      'senderProfileImage': senderProfilePhoto,
-      'receiverUid': receiverUid,
-      'receiverName': receiverName,
-      'receiverUsername': receiverUsername,
-      'receiverRole': receiverRole,
-      'receiverProfilePhoto': receiverProfilePhoto,
-      'receiverProfileImage': receiverProfilePhoto,
-      'status': status,
-      'isRead': isRead,
-      'createdAt': createdAt != null
-          ? Timestamp.fromDate(createdAt!)
-          : FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    };
-  }
-}
+export 'package:creatorconnect/models/connection_request_model.dart';
 
 class ConnectionRequestService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -165,22 +60,19 @@ class ConnectionRequestService {
               'updatedAt': FieldValue.serverTimestamp(),
             });
 
-            final connectionRef =
-                _firestore.collection('connections').doc(docId);
+            final connectionRef = _firestore
+                .collection('connections')
+                .doc(docId);
             final userIds = [senderUid, receiverUid]..sort();
-            transaction.set(
-              connectionRef,
-              {
-                'connectionId': docId,
-                'userIds': userIds,
-                'senderUid': existingSender ?? receiverUid,
-                'receiverUid': senderUid,
-                'status': 'accepted',
-                'createdAt': FieldValue.serverTimestamp(),
-                'updatedAt': FieldValue.serverTimestamp(),
-              },
-              SetOptions(merge: true),
-            );
+            transaction.set(connectionRef, {
+              'connectionId': docId,
+              'userIds': userIds,
+              'senderUid': existingSender ?? receiverUid,
+              'receiverUid': senderUid,
+              'status': 'accepted',
+              'createdAt': FieldValue.serverTimestamp(),
+              'updatedAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
             return;
           }
         }
@@ -228,36 +120,40 @@ class ConnectionRequestService {
     }
 
     final docId = pairKey(currentUid, otherUid);
-    return _collection.doc(docId).snapshots().map((snapshot) {
-      if (!snapshot.exists || snapshot.data() == null) {
-        return ConnectionStatus.none;
-      }
+    return _collection
+        .doc(docId)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists || snapshot.data() == null) {
+            return ConnectionStatus.none;
+          }
 
-      final data = snapshot.data()!;
-      final status = data['status']?.toString();
-      final senderUid = data['senderUid']?.toString();
+          final data = snapshot.data()!;
+          final status = data['status']?.toString();
+          final senderUid = data['senderUid']?.toString();
 
-      if (status == 'accepted') {
-        return ConnectionStatus.connected;
-      }
+          if (status == 'accepted') {
+            return ConnectionStatus.connected;
+          }
 
-      if (status == 'pending') {
-        if (senderUid == currentUid) {
-          return ConnectionStatus.pendingSent;
-        } else {
-          return ConnectionStatus.pendingReceived;
-        }
-      }
+          if (status == 'pending') {
+            if (senderUid == currentUid) {
+              return ConnectionStatus.pendingSent;
+            } else {
+              return ConnectionStatus.pendingReceived;
+            }
+          }
 
-      if (status == 'rejected') {
-        return ConnectionStatus.rejected;
-      }
+          if (status == 'rejected') {
+            return ConnectionStatus.rejected;
+          }
 
-      return ConnectionStatus.none;
-    }).handleError((error) {
-      debugPrint('watchConnectionStatus error: $error');
-      return ConnectionStatus.none;
-    });
+          return ConnectionStatus.none;
+        })
+        .handleError((error) {
+          debugPrint('watchConnectionStatus error: $error');
+          return ConnectionStatus.none;
+        });
   }
 
   /// Listens to incoming pending connection requests for [receiverUid].
@@ -301,8 +197,9 @@ class ConnectionRequestService {
           final seenOtherUids = <String>{};
           final deduplicated = <ConnectionRequest>[];
           for (final item in list) {
-            final otherUid =
-                item.senderUid == uid ? item.receiverUid : item.senderUid;
+            final otherUid = item.senderUid == uid
+                ? item.receiverUid
+                : item.senderUid;
             if (otherUid.isNotEmpty && seenOtherUids.add(otherUid)) {
               deduplicated.add(item);
             }
@@ -348,18 +245,16 @@ class ConnectionRequestService {
       senderUid = data?['senderUid']?.toString() ?? '';
       senderName = data?['senderName']?.toString() ?? 'Creator';
       senderRole = data?['senderRole']?.toString() ?? 'Creator';
-      senderPhoto = (data?['senderProfileImage'] ??
-              data?['senderProfilePhoto'] ??
-              '')
-          .toString();
+      senderPhoto =
+          (data?['senderProfileImage'] ?? data?['senderProfilePhoto'] ?? '')
+              .toString();
       senderUsername = data?['senderUsername']?.toString() ?? '';
 
       receiverName = data?['receiverName']?.toString() ?? 'Creator';
       receiverRole = data?['receiverRole']?.toString() ?? 'Creator';
-      receiverPhoto = (data?['receiverProfileImage'] ??
-              data?['receiverProfilePhoto'] ??
-              '')
-          .toString();
+      receiverPhoto =
+          (data?['receiverProfileImage'] ?? data?['receiverProfilePhoto'] ?? '')
+              .toString();
       receiverUsername = data?['receiverUsername']?.toString() ?? '';
 
       final userIds = [senderUid, receiverUid]..sort();
@@ -370,30 +265,26 @@ class ConnectionRequestService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      transaction.set(
-        connectionRef,
-        {
-          'connectionId': requestId,
-          'requestId': requestId,
-          'userIds': userIds,
-          'senderUid': senderUid,
-          'receiverUid': receiverUid,
-          'status': 'accepted',
-          'isRead': true,
-          'createdAt': FieldValue.serverTimestamp(),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-        SetOptions(merge: true),
-      );
+      transaction.set(connectionRef, {
+        'connectionId': requestId,
+        'requestId': requestId,
+        'userIds': userIds,
+        'senderUid': senderUid,
+        'receiverUid': receiverUid,
+        'status': 'accepted',
+        'isRead': true,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
     });
 
     // Atomically increment connection counts in Profile_Data for both users
     if (senderUid.isNotEmpty && receiverUid.isNotEmpty) {
       try {
-        final senderRef =
-            _firestore.collection('Profile_Data').doc(senderUid);
-        final receiverRef =
-            _firestore.collection('Profile_Data').doc(receiverUid);
+        final senderRef = _firestore.collection('Profile_Data').doc(senderUid);
+        final receiverRef = _firestore
+            .collection('Profile_Data')
+            .doc(receiverUid);
         await senderRef.set({
           'connectionsCount': FieldValue.increment(1),
         }, SetOptions(merge: true));
@@ -474,7 +365,8 @@ class ConnectionRequestService {
           final connectedUserIds = <String>{};
           for (final doc in snapshot.docs) {
             final data = doc.data();
-            final userIds = (data['userIds'] as List<dynamic>?)
+            final userIds =
+                (data['userIds'] as List<dynamic>?)
                     ?.map((e) => e.toString())
                     .toList() ??
                 [];
@@ -561,7 +453,8 @@ class ConnectionRequestService {
         // Ignore rejected connections so creators could potentially re-connect or view
         if (status == 'rejected') continue;
 
-        final uList = (data['userIds'] as List<dynamic>?)
+        final uList =
+            (data['userIds'] as List<dynamic>?)
                 ?.map((e) => e.toString())
                 .toList() ??
             [];
@@ -632,7 +525,8 @@ class ConnectionRequestService {
             final status = data['status']?.toString();
             if (status == 'rejected') continue;
 
-            final uList = (data['userIds'] as List<dynamic>?)
+            final uList =
+                (data['userIds'] as List<dynamic>?)
                     ?.map((e) => e.toString())
                     .toList() ??
                 [];
@@ -658,4 +552,3 @@ class ConnectionRequestService {
         });
   }
 }
-

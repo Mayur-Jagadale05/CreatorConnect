@@ -213,7 +213,7 @@ class _LoginpageState extends State<Loginpage> {
       labelText: label,
       prefixIcon: Icon(icon, color: purple),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.72),
+      fillColor: Colors.white.withValues(alpha: 0.72),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide.none,
@@ -370,7 +370,7 @@ class _LoginpageState extends State<Loginpage> {
                           ),
                           const SizedBox(height: 20),
                           DropdownButtonFormField<String>(
-                            value: selectedRole,
+                            initialValue: selectedRole,
                             isExpanded: true,
                             items: const [
                               DropdownMenuItem(

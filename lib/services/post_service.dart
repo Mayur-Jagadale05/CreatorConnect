@@ -90,7 +90,8 @@ class PostService {
           bytes,
           fileOptions: FileOptions(
             contentType: _contentTypeFor(ext),
-            upsert: false, // Must be false to avoid requiring UPDATE RLS permission
+            upsert:
+                false, // Must be false to avoid requiring UPDATE RLS permission
           ),
         );
 

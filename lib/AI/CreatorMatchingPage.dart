@@ -16,7 +16,10 @@ class CreatorMatchingPage extends StatelessWidget {
   static const Color creamBg = Color(0xFFF7F5F3);
   static const Color cardBg = Colors.white;
 
-  Future<void> _launchExternalUrl(BuildContext context, String? urlString) async {
+  Future<void> _launchExternalUrl(
+    BuildContext context,
+    String? urlString,
+  ) async {
     if (urlString == null || urlString.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No link provided by creator.')),
@@ -26,24 +29,27 @@ class CreatorMatchingPage extends StatelessWidget {
 
     final uri = Uri.tryParse(urlString.trim());
     if (uri == null || !uri.hasScheme) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid URL format.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invalid URL format.')));
       return;
     }
 
     try {
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open link.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not open link.')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to open link: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Unable to open link: $e')));
       }
     }
   }
@@ -74,7 +80,10 @@ class CreatorMatchingPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: primaryBurgundy),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: primaryBurgundy,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -122,11 +131,13 @@ class CreatorMatchingPage extends StatelessWidget {
                             backgroundColor: CreatorTheme.lavender,
                             backgroundImage:
                                 (photo.isNotEmpty && photo.startsWith('http'))
-                                    ? NetworkImage(photo)
-                                    : null,
+                                ? NetworkImage(photo)
+                                : null,
                             child: (photo.isEmpty || !photo.startsWith('http'))
                                 ? Text(
-                                    name.isNotEmpty ? name[0].toUpperCase() : 'C',
+                                    name.isNotEmpty
+                                        ? name[0].toUpperCase()
+                                        : 'C',
                                     style: const TextStyle(
                                       fontSize: 32,
                                       fontWeight: FontWeight.bold,
@@ -192,10 +203,17 @@ class CreatorMatchingPage extends StatelessWidget {
                         spacing: 12,
                         runSpacing: 8,
                         children: [
-                          if (location.isNotEmpty && location != 'Not specified')
-                            _buildInfoPill(Icons.location_on_outlined, location),
+                          if (location.isNotEmpty &&
+                              location != 'Not specified')
+                            _buildInfoPill(
+                              Icons.location_on_outlined,
+                              location,
+                            ),
                           if (experience.isNotEmpty)
-                            _buildInfoPill(Icons.work_outline_rounded, experience),
+                            _buildInfoPill(
+                              Icons.work_outline_rounded,
+                              experience,
+                            ),
                           if (category.isNotEmpty)
                             _buildInfoPill(Icons.category_outlined, category),
                         ],
@@ -225,8 +243,11 @@ class CreatorMatchingPage extends StatelessWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.info_outline_rounded,
-                                color: primaryBurgundy, size: 20),
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: primaryBurgundy,
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'About Creator',
@@ -272,8 +293,11 @@ class CreatorMatchingPage extends StatelessWidget {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.auto_awesome,
-                                color: primaryBurgundy, size: 20),
+                            Icon(
+                              Icons.auto_awesome,
+                              color: primaryBurgundy,
+                              size: 20,
+                            ),
                             SizedBox(width: 8),
                             Text(
                               'Verified Skills & Tools',
@@ -334,8 +358,11 @@ class CreatorMatchingPage extends StatelessWidget {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.folder_shared_outlined,
-                              color: primaryBurgundy, size: 20),
+                          Icon(
+                            Icons.folder_shared_outlined,
+                            color: primaryBurgundy,
+                            size: 20,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'Portfolio & Work Samples',
@@ -506,4 +533,3 @@ class CreatorMatchingPage extends StatelessWidget {
     );
   }
 }
-

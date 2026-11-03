@@ -1342,7 +1342,7 @@ class _ProfileDetailsPageState extends State<ProfileDetailsPage> {
         Text(label, style: labelStyle),
         const SizedBox(height: 9),
         DropdownButtonFormField<String>(
-          value: selectedValue,
+          initialValue: selectedValue,
           onChanged: isEditing && !isSaving && isOwnProfile && label != 'Role'
               ? onChanged
               : null,

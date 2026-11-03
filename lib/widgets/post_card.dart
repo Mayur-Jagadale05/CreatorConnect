@@ -42,9 +42,9 @@ class PostCard extends StatelessWidget {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open media: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not open media: $e')));
       }
     }
   }
@@ -112,7 +112,10 @@ class PostCard extends StatelessWidget {
                     errorBuilder: (_, _, _) => Container(
                       color: lavender,
                       child: const Center(
-                        child: Icon(Icons.image_not_supported_rounded, color: purple),
+                        child: Icon(
+                          Icons.image_not_supported_rounded,
+                          color: purple,
+                        ),
                       ),
                     ),
                   ),
@@ -125,7 +128,11 @@ class PostCard extends StatelessWidget {
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 16),
+                      child: const Icon(
+                        Icons.fullscreen_rounded,
+                        color: Colors.white,
+                        size: 16,
+                      ),
                     ),
                   ),
                 ],
@@ -181,7 +188,10 @@ class PostCard extends StatelessWidget {
                   top: 10,
                   right: 10,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black45,
                       borderRadius: BorderRadius.circular(6),
@@ -189,7 +199,11 @@ class PostCard extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.videocam_rounded, color: Colors.white, size: 14),
+                        Icon(
+                          Icons.videocam_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
                         SizedBox(width: 4),
                         Text(
                           'Video',
@@ -354,7 +368,10 @@ class PostCard extends StatelessWidget {
                           const SizedBox(width: 6),
                           const Text(
                             '•',
-                            style: TextStyle(color: secondaryText, fontSize: 11),
+                            style: TextStyle(
+                              color: secondaryText,
+                              fontSize: 11,
+                            ),
                           ),
                           const SizedBox(width: 6),
                         ],
@@ -372,7 +389,10 @@ class PostCard extends StatelessWidget {
               ),
               if (isOwner)
                 PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert_rounded, color: secondaryText),
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: secondaryText,
+                  ),
                   onSelected: (val) {
                     if (val == 'edit' && onEdit != null) onEdit!();
                     if (val == 'delete' && onDelete != null) onDelete!();
@@ -392,7 +412,11 @@ class PostCard extends StatelessWidget {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red),
+                          Icon(
+                            Icons.delete_outline_rounded,
+                            size: 18,
+                            color: Colors.red,
+                          ),
                           SizedBox(width: 8),
                           Text('Delete', style: TextStyle(color: Colors.red)),
                         ],
@@ -435,4 +459,3 @@ class PostCard extends StatelessWidget {
     );
   }
 }
-

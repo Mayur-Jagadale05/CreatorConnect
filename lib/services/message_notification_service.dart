@@ -42,7 +42,8 @@ class MessageNotificationService {
           final lastTime = chat.lastMessageTime;
 
           if (senderUid.isEmpty || senderUid == currentUid) continue;
-          if (lastTime == null || lastTime.isBefore(_sessionStartTime)) continue;
+          if (lastTime == null || lastTime.isBefore(_sessionStartTime))
+            continue;
           if (activeChatId == chat.chatId) continue;
 
           final signature = '${chat.chatId}_${lastTime.millisecondsSinceEpoch}';
@@ -63,28 +64,31 @@ class MessageNotificationService {
     // 2. Listen for incoming connection requests
     _connectionRequestsSub =
         ConnectionRequestService.watchIncomingRequests(currentUid).listen(
-      (requests) {
-        for (final req in requests) {
-          if (req.senderUid.isEmpty || req.senderUid == currentUid) continue;
-          if (req.status != 'pending') continue;
+          (requests) {
+            for (final req in requests) {
+              if (req.senderUid.isEmpty || req.senderUid == currentUid)
+                continue;
+              if (req.status != 'pending') continue;
 
-          final time = req.createdAt;
-          if (time != null && time.isBefore(_sessionStartTime)) continue;
+              final time = req.createdAt;
+              if (time != null && time.isBefore(_sessionStartTime)) continue;
 
-          final signature =
-              'conn_${req.requestId}_${time?.millisecondsSinceEpoch ?? 0}';
-          if (_seenMessageSignatures.contains(signature)) continue;
-          _seenMessageSignatures.add(signature);
+              final signature =
+                  'conn_${req.requestId}_${time?.millisecondsSinceEpoch ?? 0}';
+              if (_seenMessageSignatures.contains(signature)) continue;
+              _seenMessageSignatures.add(signature);
 
-          if (context.mounted) {
-            _showConnectionRequestNotification(context, req);
-          }
-        }
-      },
-      onError: (err) {
-        debugPrint('MessageNotificationService connection request stream error: $err');
-      },
-    );
+              if (context.mounted) {
+                _showConnectionRequestNotification(context, req);
+              }
+            }
+          },
+          onError: (err) {
+            debugPrint(
+              'MessageNotificationService connection request stream error: $err',
+            );
+          },
+        );
   }
 
   void stopListening() {
@@ -302,7 +306,11 @@ class _NotificationBannerWidgetState extends State<_NotificationBannerWidget>
                               ? NetworkImage(widget.senderPhoto)
                               : null,
                           child: widget.senderPhoto.isEmpty
-                              ? const Icon(Icons.person, color: purple, size: 20)
+                              ? const Icon(
+                                  Icons.person,
+                                  color: purple,
+                                  size: 20,
+                                )
                               : null,
                         ),
                         const SizedBox(width: 12),

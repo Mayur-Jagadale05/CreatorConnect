@@ -174,10 +174,10 @@ class AIService {
         .orderBy('clientTimestamp', descending: false)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => AIChatMessage.fromFirestore(doc))
-          .toList();
-    });
+          return snapshot.docs
+              .map((doc) => AIChatMessage.fromFirestore(doc))
+              .toList();
+        });
   }
 
   /// Stream of user chat sessions for History screen
@@ -192,19 +192,20 @@ class AIService {
         .orderBy('updatedAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'chatId': doc.id,
-          'title': data['title'] ?? 'Chat',
-          'userRole': data['userRole'] ?? '',
-          'lastMessage': data['lastMessage'] ?? '',
-          'updatedAt': _extractDateTime(data['updatedAt']) ??
-              _extractDateTime(data['createdAt']) ??
-              DateTime.now(),
-        };
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'chatId': doc.id,
+              'title': data['title'] ?? 'Chat',
+              'userRole': data['userRole'] ?? '',
+              'lastMessage': data['lastMessage'] ?? '',
+              'updatedAt':
+                  _extractDateTime(data['updatedAt']) ??
+                  _extractDateTime(data['createdAt']) ??
+                  DateTime.now(),
+            };
+          }).toList();
+        });
   }
 
   DateTime? _extractDateTime(dynamic field) {
@@ -274,7 +275,9 @@ class AIService {
   }
 
   /// Queries Firestore for actual creators matching role, skills, location, category
-  Future<List<Map<String, dynamic>>> findMatchingCreators(String userQuery) async {
+  Future<List<Map<String, dynamic>>> findMatchingCreators(
+    String userQuery,
+  ) async {
     final lower = userQuery.toLowerCase();
     final currentUid = _auth.currentUser?.uid;
 
@@ -342,8 +345,9 @@ class AIService {
         final docUid = data['uid'] ?? doc.id;
         if (docUid == currentUid) continue; // Exclude current user
 
-        final name = (data['fullName'] ?? data['name'] ?? data['username'] ?? '')
-            .toString();
+        final name =
+            (data['fullName'] ?? data['name'] ?? data['username'] ?? '')
+                .toString();
         final role = (data['role'] ?? '').toString();
         final location = (data['location'] ?? '').toString();
         final skills = (data['skills'] ?? '').toString();
@@ -458,8 +462,9 @@ class AIService {
       // 3. Prepare Grounded Creator Context
       String creatorContextPrompt = '';
       if (matchedCreators.isNotEmpty) {
-        final creatorListStr = matchedCreators.map((c) {
-          return '''
+        final creatorListStr = matchedCreators
+            .map((c) {
+              return '''
 - Name: ${c['name']}
   Role: ${c['role']}
   Location: ${c['location'].isEmpty ? 'Not specified' : c['location']}
@@ -469,9 +474,11 @@ class AIService {
   Portfolio: ${c['portfolioUrl'].isNotEmpty ? 'Available' : 'None'}
   Bio: ${c['bio']}
 ''';
-        }).join('\n');
+            })
+            .join('\n');
 
-        creatorContextPrompt = '''
+        creatorContextPrompt =
+            '''
 
 VERIFIED CREATOR PROFILES FROM CREATORCONNECT DATABASE:
 $creatorListStr
@@ -553,10 +560,14 @@ Kindly explain this to the user, suggest broadening the search criteria (e.g. co
               body: jsonEncode({
                 'systemInstruction': systemInstruction,
                 'message': userMessage,
-                'history': history.map((m) => {
-                      'role': m.isUser ? 'user' : 'model',
-                      'content': m.content,
-                    }).toList(),
+                'history': history
+                    .map(
+                      (m) => {
+                        'role': m.isUser ? 'user' : 'model',
+                        'content': m.content,
+                      },
+                    )
+                    .toList(),
               }),
             )
             .timeout(const Duration(seconds: 35));
@@ -566,7 +577,9 @@ Kindly explain this to the user, suggest broadening the search criteria (e.g. co
           return data['reply'] ?? data['text'] ?? 'No response received.';
         }
       } catch (e) {
-        debugPrint('Cloud Function call failed, falling back to direct API: $e');
+        debugPrint(
+          'Cloud Function call failed, falling back to direct API: $e',
+        );
       }
     }
 
@@ -592,7 +605,7 @@ Or deploy our Firebase Cloud Function backend for zero client-side key exposure!
       contents.add({
         'role': msg.isUser ? 'user' : 'model',
         'parts': [
-          {'text': msg.content}
+          {'text': msg.content},
         ],
       });
     }
@@ -601,15 +614,15 @@ Or deploy our Firebase Cloud Function backend for zero client-side key exposure!
     contents.add({
       'role': 'user',
       'parts': [
-        {'text': userMessage}
+        {'text': userMessage},
       ],
     });
 
     final requestBody = {
       'systemInstruction': {
         'parts': [
-          {'text': systemInstruction}
-        ]
+          {'text': systemInstruction},
+        ],
       },
       'contents': contents,
       'generationConfig': {

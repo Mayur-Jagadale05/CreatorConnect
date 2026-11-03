@@ -68,8 +68,6 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/images/creatorconnect_background.png
-    - assets/images/creatorconnect_background.jpg
 
   # To add assets to your application, add an assets section, like this:
   # assets:

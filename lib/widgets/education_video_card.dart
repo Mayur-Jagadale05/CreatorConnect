@@ -11,26 +11,22 @@ class EducationVideoCard extends StatelessWidget {
   final EducationalVideo video;
   final VoidCallback? onDelete; // Used when displayed in uploader's Profile
 
-  const EducationVideoCard({
-    super.key,
-    required this.video,
-    this.onDelete,
-  });
+  const EducationVideoCard({super.key, required this.video, this.onDelete});
 
   Future<void> _watchVideo(BuildContext context, String url) async {
     final cleanUrl = url.trim();
     if (cleanUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No video link available.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No video link available.')));
       return;
     }
 
     final uri = Uri.tryParse(cleanUrl);
     if (uri == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid video link.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invalid video link.')));
       return;
     }
 
@@ -46,9 +42,9 @@ class EducationVideoCard extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to play video: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Unable to play video: $e')));
       }
     }
   }
@@ -317,9 +313,7 @@ class EducationVideoCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: lavender.withValues(alpha: 0.45),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: purple.withValues(alpha: 0.08),
-                ),
+                border: Border.all(color: purple.withValues(alpha: 0.08)),
               ),
               child: Text(
                 video.description,

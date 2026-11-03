@@ -1404,7 +1404,9 @@ class _BusinessmanpageState extends State<Businessmanpage>
                             .doc(uid)
                             .set(legacyDoc.data()!, SetOptions(merge: true))
                             .catchError((_) {});
-                        if (!controller.isClosed) controller.add(legacyDoc.data()!);
+                        if (!controller.isClosed) {
+                          controller.add(legacyDoc.data()!);
+                        }
                       }
                     })
                     .catchError((_) {});

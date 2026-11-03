@@ -14,10 +14,7 @@ class AIPromptSuggestion {
 /// System instructions and prompt templates for CreatorConnect AI
 class AIPrompt {
   /// Returns tailored system instructions according to user role
-  static String getSystemInstruction({
-    required String role,
-    String? userName,
-  }) {
+  static String getSystemInstruction({required String role, String? userName}) {
     final cleanRole = role.trim().toLowerCase();
     final greeting = (userName != null && userName.isNotEmpty)
         ? 'The user you are assisting is named $userName.'
@@ -283,4 +280,3 @@ Help the user collaborate, brainstorm creative concepts, optimize their workflow
     }
   }
 }
-

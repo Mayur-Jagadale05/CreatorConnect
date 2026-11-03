@@ -1343,8 +1343,9 @@ class _InfluencerPageState extends State<InfluencerPage>
                             .doc(uid)
                             .set(legacyDoc.data()!, SetOptions(merge: true))
                             .catchError((_) {});
-                        if (!controller.isClosed)
+                        if (!controller.isClosed) {
                           controller.add(legacyDoc.data()!);
+                        }
                       }
                     })
                     .catchError((_) {});

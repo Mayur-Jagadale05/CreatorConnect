@@ -9,11 +9,7 @@ class AIChatBubble extends StatelessWidget {
   final AIChatMessage message;
   final VoidCallback? onRetry;
 
-  const AIChatBubble({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const AIChatBubble({super.key, required this.message, this.onRetry});
 
   static const Color primaryBurgundy = Color(0xFF35132F);
   static const Color darkInk = Color(0xFF302A33);
@@ -23,7 +19,9 @@ class AIChatBubble extends StatelessWidget {
   static const Color mutedText = Color(0xFF827985);
 
   String _formatTime(DateTime time) {
-    final hour = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
+    final hour = time.hour > 12
+        ? time.hour - 12
+        : (time.hour == 0 ? 12 : time.hour);
     final minute = time.minute.toString().padLeft(2, '0');
     final ampm = time.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $ampm';
@@ -128,11 +126,7 @@ class AIChatBubble extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: goldAccent,
-              size: 20,
-            ),
+            child: const Icon(Icons.auto_awesome, color: goldAccent, size: 20),
           ),
 
           // Bubble & Content
@@ -179,11 +173,7 @@ class AIChatBubble extends StatelessWidget {
                                 ),
                               ),
                               SizedBox(width: 6),
-                              Icon(
-                                Icons.verified,
-                                color: goldAccent,
-                                size: 14,
-                              ),
+                              Icon(Icons.verified, color: goldAccent, size: 14),
                             ],
                           ),
                           InkWell(
@@ -312,8 +302,8 @@ class AIChatBubble extends StatelessWidget {
                 backgroundColor: lavender,
                 backgroundImage:
                     (photo.isNotEmpty && photo.toString().startsWith('http'))
-                        ? NetworkImage(photo)
-                        : null,
+                    ? NetworkImage(photo)
+                    : null,
                 child: (photo.isEmpty || !photo.toString().startsWith('http'))
                     ? Text(
                         name.isNotEmpty ? name[0].toUpperCase() : 'C',
@@ -417,7 +407,9 @@ class AIChatBubble extends StatelessWidget {
           ),
 
           // Extra details: Category, Experience and Skills
-          if (category.isNotEmpty || experience.isNotEmpty || skillsList.isNotEmpty) ...[
+          if (category.isNotEmpty ||
+              experience.isNotEmpty ||
+              skillsList.isNotEmpty) ...[
             const SizedBox(height: 10),
             Wrap(
               spacing: 6,
@@ -566,13 +558,19 @@ class _AITypingIndicatorState extends State<AITypingIndicator>
                       children: List.generate(3, (index) {
                         final delay = index * 0.25;
                         final value = (_controller.value - delay) % 1.0;
-                        final opacity = (value < 0.5 ? value * 2 : (1.0 - value) * 2).clamp(0.2, 1.0);
+                        final opacity =
+                            (value < 0.5 ? value * 2 : (1.0 - value) * 2).clamp(
+                              0.2,
+                              1.0,
+                            );
                         return Container(
                           width: 6,
                           height: 6,
                           margin: const EdgeInsets.symmetric(horizontal: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF35132F).withValues(alpha: opacity),
+                            color: const Color(
+                              0xFF35132F,
+                            ).withValues(alpha: opacity),
                             shape: BoxShape.circle,
                           ),
                         );

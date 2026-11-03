@@ -39,7 +39,8 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
 
   Uint8List? _selectedFileBytes;
   String? _selectedFileName;
-  String _selectedMediaType = 'none'; // 'image' | 'video' | 'pdf' | 'document' | 'none'
+  String _selectedMediaType =
+      'none'; // 'image' | 'video' | 'pdf' | 'document' | 'none'
   String? _existingMediaUrl;
 
   bool _isSubmitting = false;
@@ -48,10 +49,12 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
   @override
   void initState() {
     super.initState();
-    _titleController =
-        TextEditingController(text: widget.existingPost?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.existingPost?.description ?? '');
+    _titleController = TextEditingController(
+      text: widget.existingPost?.title ?? '',
+    );
+    _descriptionController = TextEditingController(
+      text: widget.existingPost?.description ?? '',
+    );
     if (widget.existingPost != null) {
       _existingMediaUrl = widget.existingPost!.mediaUrl;
       _selectedMediaType = widget.existingPost!.mediaType;
@@ -83,9 +86,9 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick image: $e')));
       }
     }
   }
@@ -110,9 +113,9 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to pick file: $e')));
       }
     }
   }
@@ -130,9 +133,16 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
 
-    if (title.isEmpty && description.isEmpty && _selectedFileBytes == null && _existingMediaUrl == null) {
+    if (title.isEmpty &&
+        description.isEmpty &&
+        _selectedFileBytes == null &&
+        _existingMediaUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add a title, description, or media to publish.')),
+        const SnackBar(
+          content: Text(
+            'Please add a title, description, or media to publish.',
+          ),
+        ),
       );
       return;
     }
@@ -199,11 +209,13 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
   }
 
   Widget _buildMediaAttachmentPreview() {
-    if (_selectedFileName == null && (_existingMediaUrl == null || _existingMediaUrl!.isEmpty)) {
+    if (_selectedFileName == null &&
+        (_existingMediaUrl == null || _existingMediaUrl!.isEmpty)) {
       return const SizedBox.shrink();
     }
 
-    final name = _selectedFileName ?? 'Attached ${_selectedMediaType.toUpperCase()}';
+    final name =
+        _selectedFileName ?? 'Attached ${_selectedMediaType.toUpperCase()}';
 
     return Container(
       margin: const EdgeInsets.only(top: 14),
@@ -219,8 +231,8 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
             _selectedMediaType == 'image'
                 ? Icons.image_rounded
                 : _selectedMediaType == 'video'
-                    ? Icons.videocam_rounded
-                    : Icons.picture_as_pdf_rounded,
+                ? Icons.videocam_rounded
+                : Icons.picture_as_pdf_rounded,
             color: purple,
             size: 24,
           ),
@@ -238,7 +250,11 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close_rounded, size: 18, color: secondaryText),
+            icon: const Icon(
+              Icons.close_rounded,
+              size: 18,
+              color: secondaryText,
+            ),
             onPressed: _isSubmitting ? null : _clearMedia,
             visualDensity: VisualDensity.compact,
             tooltip: 'Remove media',
@@ -304,7 +320,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: secondaryText),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: secondaryText,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                     ),
                   ],
@@ -316,10 +335,17 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                 TextFormField(
                   controller: _titleController,
                   enabled: !_isSubmitting,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: primaryText),
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: primaryText,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'Post Title (Optional)',
-                    hintStyle: const TextStyle(color: secondaryText, fontWeight: FontWeight.w500),
+                    hintStyle: const TextStyle(
+                      color: secondaryText,
+                      fontWeight: FontWeight.w500,
+                    ),
                     filled: true,
                     fillColor: const Color(0xFFFBF9F8),
                     border: OutlineInputBorder(
@@ -334,7 +360,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       borderRadius: BorderRadius.circular(14),
                       borderSide: const BorderSide(color: purple, width: 1.2),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                   ),
                 ),
 
@@ -346,7 +375,11 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                   enabled: !_isSubmitting,
                   maxLines: 5,
                   minLines: 3,
-                  style: const TextStyle(fontSize: 14, color: primaryText, height: 1.4),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: primaryText,
+                    height: 1.4,
+                  ),
                   decoration: InputDecoration(
                     hintText: 'What would you like to share?',
                     hintStyle: const TextStyle(color: secondaryText),
@@ -364,7 +397,10 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       borderRadius: BorderRadius.circular(14),
                       borderSide: const BorderSide(color: purple, width: 1.2),
                     ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                   ),
                 ),
 
@@ -395,19 +431,31 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: purple,
                         side: BorderSide(color: purple.withValues(alpha: 0.25)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                     OutlinedButton.icon(
-                      onPressed: _isSubmitting ? null : () => _pickFile(FileType.video, 'video'),
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => _pickFile(FileType.video, 'video'),
                       icon: const Icon(Icons.video_library_outlined, size: 16),
                       label: const Text('Video'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: purple,
                         side: BorderSide(color: purple.withValues(alpha: 0.25)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                     ),
                   ],
@@ -421,12 +469,19 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(color: purple, strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          color: purple,
+                          strokeWidth: 2,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Text(
                         _statusMessage ?? 'Publishing...',
-                        style: const TextStyle(fontSize: 13, color: secondaryText, fontWeight: FontWeight.w600),
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: secondaryText,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -438,8 +493,13 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-                      child: const Text('Cancel', style: TextStyle(color: secondaryText)),
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: secondaryText),
+                      ),
                     ),
                     const SizedBox(width: 10),
                     FilledButton(
@@ -447,8 +507,13 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
                       style: FilledButton.styleFrom(
                         backgroundColor: purple,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: Text(
                         isEditing ? 'Save Changes' : 'Publish Post',
@@ -465,4 +530,3 @@ class _CreatePostDialogState extends State<CreatePostDialog> {
     );
   }
 }
-

@@ -46,8 +46,9 @@ class PostModel {
       userName: (data['creatorName'] ?? data['userName'] ?? 'Creator')
           .toString()
           .trim(),
-      username:
-          (data['creatorUsername'] ?? data['username'] ?? '').toString().trim(),
+      username: (data['creatorUsername'] ?? data['username'] ?? '')
+          .toString()
+          .trim(),
       userRole: (data['creatorRole'] ?? data['userRole'] ?? 'Creator')
           .toString()
           .trim(),
@@ -56,8 +57,9 @@ class PostModel {
               .toString()
               .trim(),
       title: (data['title'] ?? '').toString().trim(),
-      description:
-          (data['postContent'] ?? data['description'] ?? '').toString().trim(),
+      description: (data['postContent'] ?? data['description'] ?? '')
+          .toString()
+          .trim(),
       mediaUrl: (data['postImage'] ?? data['mediaUrl'] ?? '').toString().trim(),
       mediaType: (data['mediaType'] ?? 'none').toString().trim(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),

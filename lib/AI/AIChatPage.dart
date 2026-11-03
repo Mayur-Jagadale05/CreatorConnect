@@ -83,16 +83,19 @@ class _AIChatPageState extends State<AIChatPage> {
     _messagesSubscription?.cancel();
     _messagesSubscription = AIService()
         .getChatMessagesStream(chatId)
-        .listen((remoteMessages) {
-      if (!mounted) return;
-      setState(() {
-        _localMessages.clear();
-        _localMessages.addAll(remoteMessages);
-      });
-      _scrollToBottom();
-    }, onError: (err) {
-      debugPrint('Error listening to chat messages: $err');
-    });
+        .listen(
+          (remoteMessages) {
+            if (!mounted) return;
+            setState(() {
+              _localMessages.clear();
+              _localMessages.addAll(remoteMessages);
+            });
+            _scrollToBottom();
+          },
+          onError: (err) {
+            debugPrint('Error listening to chat messages: $err');
+          },
+        );
   }
 
   void _scrollToBottom() {
@@ -150,8 +153,7 @@ class _AIChatPageState extends State<AIChatPage> {
       _errorMessage = null;
     });
 
-    final tempUserMessageId =
-        'temp_${DateTime.now().millisecondsSinceEpoch}';
+    final tempUserMessageId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
     final userMessage = AIChatMessage(
       id: tempUserMessageId,
       chatId: _activeChatId ?? 'pending',
@@ -267,9 +269,7 @@ class _AIChatPageState extends State<AIChatPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(
-            color: primaryBurgundy.withValues(alpha: 0.08),
-          ),
+          bottom: BorderSide(color: primaryBurgundy.withValues(alpha: 0.08)),
         ),
         boxShadow: [
           BoxShadow(
@@ -292,11 +292,7 @@ class _AIChatPageState extends State<AIChatPage> {
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: goldAccent,
-              size: 20,
-            ),
+            child: const Icon(Icons.auto_awesome, color: goldAccent, size: 20),
           ),
           const SizedBox(width: 12),
 
@@ -356,8 +352,10 @@ class _AIChatPageState extends State<AIChatPage> {
           ),
           IconButton(
             tooltip: 'New Conversation',
-            icon: const Icon(Icons.add_circle_outline_rounded,
-                color: primaryBurgundy),
+            icon: const Icon(
+              Icons.add_circle_outline_rounded,
+              color: primaryBurgundy,
+            ),
             onPressed: _startNewChat,
           ),
         ],
@@ -390,11 +388,7 @@ class _AIChatPageState extends State<AIChatPage> {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: goldAccent,
-              size: 40,
-            ),
+            child: const Icon(Icons.auto_awesome, color: goldAccent, size: 40),
           ),
           const SizedBox(height: 20),
 
@@ -564,14 +558,12 @@ class _AIChatPageState extends State<AIChatPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: prompts.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final p = prompts[index];
           return ActionChip(
             backgroundColor: Colors.white,
-            side: BorderSide(
-              color: primaryBurgundy.withValues(alpha: 0.15),
-            ),
+            side: BorderSide(color: primaryBurgundy.withValues(alpha: 0.15)),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
             ),
@@ -624,9 +616,7 @@ class _AIChatPageState extends State<AIChatPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(
-            color: primaryBurgundy.withValues(alpha: 0.08),
-          ),
+          top: BorderSide(color: primaryBurgundy.withValues(alpha: 0.08)),
         ),
       ),
       child: Row(
@@ -708,4 +698,3 @@ class _AIChatPageState extends State<AIChatPage> {
     );
   }
 }
-

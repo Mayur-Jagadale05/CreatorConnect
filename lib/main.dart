@@ -8,7 +8,20 @@ import 'design_system.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase currentPlatform initialize warning: $e');
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.web,
+      );
+    } catch (inner) {
+      debugPrint('Firebase fallback initialization error: $inner');
+    }
+  }
 
   try {
     await Supabase.initialize(

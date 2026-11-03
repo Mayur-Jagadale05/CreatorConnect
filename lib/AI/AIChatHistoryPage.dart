@@ -20,7 +20,9 @@ class AIChatHistoryPage extends StatelessWidget {
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
+      final hour = date.hour > 12
+          ? date.hour - 12
+          : (date.hour == 0 ? 12 : date.hour);
       final minute = date.minute.toString().padLeft(2, '0');
       final ampm = date.hour >= 12 ? 'PM' : 'AM';
       return 'Today, $hour:$minute $ampm';
@@ -31,8 +33,18 @@ class AIChatHistoryPage extends StatelessWidget {
       return days[date.weekday - 1];
     } else {
       const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[date.month - 1]} ${date.day}';
     }
@@ -91,9 +103,9 @@ class AIChatHistoryPage extends StatelessWidget {
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete chat: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to delete chat: $e')));
         }
       }
     }
@@ -107,8 +119,10 @@ class AIChatHistoryPage extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: primaryBurgundy),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: primaryBurgundy,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
@@ -204,7 +218,7 @@ class AIChatHistoryPage extends StatelessWidget {
           return ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             itemCount: chats.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            separatorBuilder: (_, _) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
               final chat = chats[index];
               final chatId = chat['chatId'] as String;
@@ -330,4 +344,3 @@ class AIChatHistoryPage extends StatelessWidget {
     );
   }
 }
-

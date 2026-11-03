@@ -80,8 +80,7 @@ class AIChatMessage {
       'content': content,
       'timestamp': FieldValue.serverTimestamp(),
       'clientTimestamp': timestamp.millisecondsSinceEpoch,
-      if (suggestedCreators.isNotEmpty)
-        'suggestedCreators': suggestedCreators,
+      if (suggestedCreators.isNotEmpty) 'suggestedCreators': suggestedCreators,
       if (metadata != null) 'metadata': metadata,
     };
   }

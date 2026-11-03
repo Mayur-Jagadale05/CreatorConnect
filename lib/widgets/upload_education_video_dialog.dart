@@ -6,10 +6,7 @@ import 'package:flutter/material.dart';
 class UploadEducationVideoDialog extends StatefulWidget {
   final String? defaultRole;
 
-  const UploadEducationVideoDialog({
-    super.key,
-    this.defaultRole,
-  });
+  const UploadEducationVideoDialog({super.key, this.defaultRole});
 
   @override
   State<UploadEducationVideoDialog> createState() =>
@@ -43,8 +40,9 @@ class _UploadEducationVideoDialogState
   Future<void> _loadRegisteredRole() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      final role =
-          await EducationalVideoService.getUserRegisteredRole(user.uid);
+      final role = await EducationalVideoService.getUserRegisteredRole(
+        user.uid,
+      );
       if (mounted && role != 'Creator' && role.isNotEmpty) {
         setState(() {
           _targetRole = role;
@@ -282,8 +280,10 @@ class _UploadEducationVideoDialogState
                   enabled: !_isUploading,
                   decoration: InputDecoration(
                     hintText: 'e.g. Strategic Business Growth 101',
-                    hintStyle:
-                        const TextStyle(fontSize: 13, color: secondaryText),
+                    hintStyle: const TextStyle(
+                      fontSize: 13,
+                      color: secondaryText,
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
@@ -292,8 +292,9 @@ class _UploadEducationVideoDialogState
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: purple.withValues(alpha: 0.2)),
+                      borderSide: BorderSide(
+                        color: purple.withValues(alpha: 0.2),
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -321,8 +322,10 @@ class _UploadEducationVideoDialogState
                   decoration: InputDecoration(
                     hintText:
                         'Briefly explain what fellow creators will learn...',
-                    hintStyle:
-                        const TextStyle(fontSize: 13, color: secondaryText),
+                    hintStyle: const TextStyle(
+                      fontSize: 13,
+                      color: secondaryText,
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                     contentPadding: const EdgeInsets.symmetric(
@@ -331,8 +334,9 @@ class _UploadEducationVideoDialogState
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: purple.withValues(alpha: 0.2)),
+                      borderSide: BorderSide(
+                        color: purple.withValues(alpha: 0.2),
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -435,4 +439,3 @@ class _UploadEducationVideoDialogState
     );
   }
 }
-
