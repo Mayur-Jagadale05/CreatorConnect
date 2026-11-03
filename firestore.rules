@@ -1,0 +1,80 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User Profiles in 'Profile_Data' collection
+    match /Profile_Data/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+
+      // CreatorConnect AI Chat Sessions Subcollection
+      match /ai_chats/{chatId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+
+        match /messages/{messageId} {
+          allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+    }
+
+    // Legacy 'users' collection (read/write fallback)
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Connection Requests between creators
+    match /connection_requests/{requestId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (
+        request.resource.data.senderUid == request.auth.uid ||
+        request.resource.data.userIds.hasAny([request.auth.uid])
+      );
+      allow update, delete: if request.auth != null && (
+        resource.data.receiverUid == request.auth.uid ||
+        resource.data.senderUid == request.auth.uid ||
+        resource.data.userIds.hasAny([request.auth.uid])
+      );
+    }
+
+    // Accepted Connections
+    match /connections/{connectionId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // 1-on-1 User Chats & Messages
+    match /chats/{chatId} {
+      allow read, write: if request.auth != null;
+
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    // Universal Posts Collection
+    match /posts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.creatorUid == request.auth.uid
+      );
+      allow update, delete: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.creatorUid == request.auth.uid
+      );
+    }
+    
+    // Educational Videos Collection
+    match /educational_videos/{videoId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.uploaderUid == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.uploaderUid == request.auth.uid;
+    }
+
+    // Fallback for all other collections
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
