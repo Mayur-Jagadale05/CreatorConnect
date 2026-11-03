@@ -2378,8 +2378,9 @@ class _WriterpageState extends State<Writerpage>
                 builder: (context, constraints) {
                   final isNarrow = constraints.maxWidth < 520;
                   final connectionsBadge = StreamBuilder<int>(
-                    stream:
-                        ConnectionRequestService.watchConnectionCount(user.uid),
+                    stream: ConnectionRequestService.watchConnectionCount(
+                      user.uid,
+                    ),
                     builder: (context, countSnap) {
                       final count = countSnap.data ?? 0;
                       return Container(
@@ -2444,10 +2445,7 @@ class _WriterpageState extends State<Writerpage>
                         const SizedBox(height: 6),
                         const Text(
                           'Chat directly with connected creators, editors, and collaborators.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: secondaryText,
-                          ),
+                          style: TextStyle(fontSize: 13, color: secondaryText),
                         ),
                       ],
                     );

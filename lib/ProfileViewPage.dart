@@ -1158,8 +1158,6 @@ class _ProfileViewPageState extends State<ProfileViewPage> {
 
   Widget _buildPostsSection(String targetRole, String targetName) {
     final user = currentUser;
-    final myProfile = _currentUserProfile ?? {};
-    final myRole = (myProfile['role'] ?? '').toString().trim();
     final bool isOwnProfile = user?.uid == widget.selectedUserUid;
 
     return StreamBuilder<List<PostModel>>(
