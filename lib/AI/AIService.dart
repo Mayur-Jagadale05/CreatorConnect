@@ -18,18 +18,11 @@ class AIService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Gemini configuration
-  // Securely passed via compile-time environment variable:
-  // flutter run --dart-define=GEMINI_API_KEY=YOUR_GEMINI_KEY
-  // or via Firebase Cloud Functions backend URL:
-  // flutter run --dart-define=AI_BACKEND_URL=https://...
-  static const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
-  static const String _backendUrl = String.fromEnvironment('AI_BACKEND_URL');
-
-  // Supported model version
-  static const String _modelName = 'gemini-1.5-flash';
-  static const String _geminiEndpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/$_modelName:generateContent';
+  static const String _backendUrl = String.fromEnvironment(
+    'AI_BACKEND_URL',
+    defaultValue:
+        'https://us-central1-creatorconnect-auth.cloudfunctions.net/creatorConnectAI',
+  );
 
   // Request lock to prevent duplicate concurrent submissions
   bool _isProcessing = false;
@@ -533,145 +526,54 @@ Kindly explain this to the user, suggest broadening the search criteria (e.g. co
     }
   }
 
-  /// Performs the actual HTTP request to either the Cloud Function or Gemini endpoint
+  /// Sends the request to the authenticated Firebase Cloud Function backend.
   Future<String> _callGemini({
     required String systemInstruction,
     required String userMessage,
     required List<AIChatMessage> history,
   }) async {
-    // Mode A: Firebase Cloud Functions Backend (if configured)
-    if (_backendUrl.isNotEmpty) {
-      try {
-        final idToken = await _auth.currentUser?.getIdToken();
-        final response = await http
-            .post(
-              Uri.parse(_backendUrl),
-              headers: {
-                'Content-Type': 'application/json',
-                if (idToken != null) 'Authorization': 'Bearer $idToken',
-              },
-              body: jsonEncode({
-                'systemInstruction': systemInstruction,
-                'message': userMessage,
-                'history': history.map((m) => {
-                      'role': m.isUser ? 'user' : 'model',
-                      'content': m.content,
-                    }).toList(),
-              }),
-            )
-            .timeout(const Duration(seconds: 35));
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return data['reply'] ?? data['text'] ?? 'No response received.';
-        }
-      } catch (e) {
-        debugPrint('Cloud Function call failed, falling back to direct API: $e');
-      }
+    final idToken = await _auth.currentUser?.getIdToken();
+    if (idToken == null || idToken.isEmpty) {
+      throw StateError(
+        'Unable to authenticate with the CreatorConnect AI backend.',
+      );
     }
-
-    // Mode B: Direct Gemini REST API via compile-time key or safe fallback
-    if (_geminiApiKey.isEmpty) {
-      return '''
-CreatorConnect AI is running in offline preview mode.
-
-To activate live Gemini responses, run your app with your Gemini API key:
-`flutter run --dart-define=GEMINI_API_KEY=YOUR_GEMINI_API_KEY`
-
-Or deploy our Firebase Cloud Function backend for zero client-side key exposure!
-''';
-    }
-
-    final url = Uri.parse('$_geminiEndpoint?key=$_geminiApiKey');
-
-    // Build Gemini contents array
-    final contents = <Map<String, dynamic>>[];
-
-    // Add conversation history
-    for (final msg in history) {
-      contents.add({
-        'role': msg.isUser ? 'user' : 'model',
-        'parts': [
-          {'text': msg.content}
-        ],
-      });
-    }
-
-    // Add current user prompt
-    contents.add({
-      'role': 'user',
-      'parts': [
-        {'text': userMessage}
-      ],
-    });
-
-    final requestBody = {
-      'systemInstruction': {
-        'parts': [
-          {'text': systemInstruction}
-        ]
-      },
-      'contents': contents,
-      'generationConfig': {
-        'temperature': 0.7,
-        'topK': 40,
-        'topP': 0.95,
-        'maxOutputTokens': 2048,
-      },
-      'safetySettings': [
-        {
-          'category': 'HARM_CATEGORY_HARASSMENT',
-          'threshold': 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-        {
-          'category': 'HARM_CATEGORY_HATE_SPEECH',
-          'threshold': 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-        {
-          'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
-          'threshold': 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-        {
-          'category': 'HARM_CATEGORY_DANGEROUS_CONTENT',
-          'threshold': 'BLOCK_MEDIUM_AND_ABOVE',
-        },
-      ],
-    };
 
     final response = await http
         .post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(requestBody),
+          Uri.parse(_backendUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $idToken',
+          },
+          body: jsonEncode({
+            'systemInstruction': systemInstruction,
+            'message': userMessage,
+            'history': history
+                .map((m) => {
+                      'role': m.isUser ? 'user' : 'model',
+                      'content': m.content,
+                    })
+                .toList(),
+          }),
         )
         .timeout(const Duration(seconds: 35));
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      final candidates = json['candidates'] as List?;
-      if (candidates != null && candidates.isNotEmpty) {
-        final content = candidates[0]['content'] as Map<String, dynamic>?;
-        final parts = content?['parts'] as List?;
-        if (parts != null && parts.isNotEmpty) {
-          final text = parts[0]['text'] as String?;
-          if (text != null && text.trim().isNotEmpty) {
-            return text.trim();
-          }
+      final data = jsonDecode(response.body);
+      if (data is Map<String, dynamic>) {
+        final reply = data['reply'] ?? data['text'];
+        if (reply is String && reply.trim().isNotEmpty) {
+          return reply.trim();
         }
       }
-      return 'I received your message, but the model generated an empty response. Please rephrase your question.';
-    } else {
-      final errorBody = response.body;
-      debugPrint('Gemini API Error: ${response.statusCode} - $errorBody');
-      try {
-        final errJson = jsonDecode(errorBody);
-        final errMsg = errJson['error']?['message'] ?? 'Gemini service error';
-        throw Exception(errMsg);
-      } catch (_) {
-        throw Exception(
-          'Failed to reach CreatorConnect AI (HTTP ${response.statusCode}). Check your network and API key.',
-        );
-      }
+      throw const FormatException(
+        'CreatorConnect AI backend returned an invalid or empty response.',
+      );
     }
+
+    throw Exception(
+      'CreatorConnect AI request failed (HTTP ${response.statusCode}): ${response.body}',
+    );
   }
 }

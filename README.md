@@ -15,3 +15,19 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Gemini AI setup
+
+The Gemini API key is stored as a Firebase Functions secret and is never bundled
+with the Flutter app. Revoke any key that has been shared publicly, then create
+a replacement in Google AI Studio and configure it locally:
+
+```shell
+firebase functions:secrets:set GEMINI_API_KEY --project creatorconnect-auth
+firebase deploy --only functions:creatorConnectAI --project creatorconnect-auth
+flutter run
+```
+
+The first command prompts for the secret value. The app calls the deployed
+`creatorConnectAI` function by default. To use a different function URL, pass
+`--dart-define=AI_BACKEND_URL=https://...` when running Flutter.
