@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:creatorconnect/ProfileViewPage.dart';
 import 'package:creatorconnect/services/chat_service.dart';
 import 'package:creatorconnect/services/message_notification_service.dart';
+import 'package:creatorconnect/widgets/remove_connection_button.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -305,6 +306,14 @@ class _ChatConversationPageState extends State<ChatConversationPage> {
                 ),
               ),
               const Spacer(),
+              if (currentUser != null)
+                RemoveConnectionButton(
+                  currentUid: currentUser!.uid,
+                  otherUid: widget.otherUserUid,
+                  onRemoved: () {
+                    if (mounted) Navigator.of(context).pop();
+                  },
+                ),
               TextButton.icon(
                 onPressed: () {
                   Navigator.push(

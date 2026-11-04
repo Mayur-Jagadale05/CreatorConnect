@@ -16,6 +16,7 @@ import 'package:creatorconnect/services/post_service.dart';
 import 'package:creatorconnect/widgets/create_post_dialog.dart';
 import 'package:creatorconnect/widgets/education_video_card.dart';
 import 'package:creatorconnect/widgets/post_card.dart';
+import 'package:creatorconnect/widgets/remove_connection_button.dart';
 import 'package:creatorconnect/widgets/upload_education_video_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -123,7 +124,7 @@ class _InfluencerPageState extends State<InfluencerPage>
   // FIRESTORE: LOAD CREATORS
   // ------------------------------------------------------------
 
-  Future<void> _loadCreators() async {
+  Future<void> _loadCreators({bool listenForConnections = true}) async {
     try {
       final uid = currentUser?.uid;
 
@@ -136,19 +137,17 @@ class _InfluencerPageState extends State<InfluencerPage>
           _connectedOrRequestedUids = existing;
         } catch (_) {}
 
-        _connectedUsersSubscription?.cancel();
-        _connectedUsersSubscription =
-            ConnectionRequestService.watchConnectedOrRequestedUserIds(
-              uid,
-            ).listen((uids) {
-              if (!mounted) return;
-              setState(() {
-                _connectedOrRequestedUids.addAll(uids);
-                creators.removeWhere(
-                  (c) => _connectedOrRequestedUids.contains(c['uid']),
-                );
+        if (listenForConnections) {
+          _connectedUsersSubscription?.cancel();
+          _connectedUsersSubscription =
+              ConnectionRequestService.watchConnectedOrRequestedUserIds(
+                uid,
+              ).listen((uids) {
+                if (!mounted) return;
+                _connectedOrRequestedUids = uids;
+                _loadCreators(listenForConnections: false);
               });
-            });
+        }
       }
 
       var profileDataSnapshot = await FirebaseFirestore.instance
@@ -3217,6 +3216,10 @@ class _InfluencerPageState extends State<InfluencerPage>
                                                 color: purple,
                                                 size: 12,
                                               ),
+                                            ),
+                                            RemoveConnectionButton(
+                                              currentUid: user.uid,
+                                              otherUid: otherUid,
                                             ),
                                           ],
                                         ),

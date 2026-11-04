@@ -16,6 +16,7 @@ import 'package:creatorconnect/services/post_service.dart';
 import 'package:creatorconnect/widgets/create_post_dialog.dart';
 import 'package:creatorconnect/widgets/education_video_card.dart';
 import 'package:creatorconnect/widgets/post_card.dart';
+import 'package:creatorconnect/widgets/remove_connection_button.dart';
 import 'package:creatorconnect/widgets/upload_education_video_dialog.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -126,26 +127,28 @@ class _WriterpageState extends State<Writerpage>
   // FIRESTORE: LOAD CREATORS
   // ------------------------------------------------------------
 
-  Future<void> _loadCreators() async {
+  Future<void> _loadCreators({bool listenForConnections = true}) async {
     try {
       final uid = currentUser?.uid;
       if (uid != null) {
         final connected =
             await ConnectionRequestService.getConnectedOrRequestedUserIds(uid);
-        _connectedOrRequestedUids.addAll(connected);
+        _connectedOrRequestedUids
+          ..clear()
+          ..addAll(connected);
 
-        _connectedUsersSubscription ??=
-            ConnectionRequestService.watchConnectedOrRequestedUserIds(
-              uid,
-            ).listen((connectedSet) {
-              if (!mounted) return;
-              setState(() {
-                _connectedOrRequestedUids.addAll(connectedSet);
-                creators.removeWhere(
-                  (c) => _connectedOrRequestedUids.contains(c['uid']),
-                );
+        if (listenForConnections) {
+          _connectedUsersSubscription ??=
+              ConnectionRequestService.watchConnectedOrRequestedUserIds(
+                uid,
+              ).listen((connectedSet) {
+                if (!mounted) return;
+                _connectedOrRequestedUids
+                  ..clear()
+                  ..addAll(connectedSet);
+                _loadCreators(listenForConnections: false);
               });
-            });
+        }
       }
 
       var snapshot = await FirebaseFirestore.instance
@@ -3144,6 +3147,10 @@ class _WriterpageState extends State<Writerpage>
                                                 color: purple,
                                                 size: 12,
                                               ),
+                                            ),
+                                            RemoveConnectionButton(
+                                              currentUid: user.uid,
+                                              otherUid: otherUid,
                                             ),
                                           ],
                                         ),

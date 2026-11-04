@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:creatorconnect/services/chat_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 enum ConnectionStatus {
@@ -120,6 +121,57 @@ class ConnectionRequestService {
   /// to prevent duplicate active requests in opposite directions.
   static String pairKey(String uidA, String uidB) {
     return (uidA.compareTo(uidB) < 0) ? '${uidA}_$uidB' : '${uidB}_$uidA';
+  }
+
+  /// Removes the relationship and its conversation for both users.
+  static Future<void> removeConnection({
+    required String currentUid,
+    required String otherUid,
+  }) async {
+    if (currentUid.isEmpty || otherUid.isEmpty || currentUid == otherUid) {
+      throw ArgumentError('A valid connection pair is required.');
+    }
+    if (FirebaseAuth.instance.currentUser?.uid != currentUid) {
+      throw StateError('You are not authorized to remove this connection.');
+    }
+
+    final requestRef = _collection.doc(pairKey(currentUid, otherUid));
+    final connectionRef =
+        _firestore.collection('connections').doc(requestRef.id);
+    final chatRef = _firestore.collection('chats').doc(requestRef.id);
+    final currentProfileRef =
+        _firestore.collection('Profile_Data').doc(currentUid);
+    final otherProfileRef =
+        _firestore.collection('Profile_Data').doc(otherUid);
+
+    await _firestore.runTransaction((transaction) async {
+      final requestSnapshot = await transaction.get(requestRef);
+      final connectionSnapshot = await transaction.get(connectionRef);
+      final currentProfileSnapshot = await transaction.get(currentProfileRef);
+      final otherProfileSnapshot = await transaction.get(otherProfileRef);
+
+      final wasAccepted =
+          requestSnapshot.data()?['status'] == 'accepted' ||
+          connectionSnapshot.data()?['status'] == 'accepted';
+
+      transaction.delete(requestRef);
+      transaction.delete(connectionRef);
+      transaction.delete(chatRef);
+
+      if (wasAccepted) {
+        for (final profileSnapshot in [
+          currentProfileSnapshot,
+          otherProfileSnapshot,
+        ]) {
+          final count = profileSnapshot.data()?['connectionsCount'];
+          if (profileSnapshot.exists && count is num && count > 0) {
+            transaction.update(profileSnapshot.reference, {
+              'connectionsCount': count - 1,
+            });
+          }
+        }
+      }
+    });
   }
 
   /// Sends a connection request from [senderUid] to [receiverUid].
@@ -658,4 +710,3 @@ class ConnectionRequestService {
         });
   }
 }
-

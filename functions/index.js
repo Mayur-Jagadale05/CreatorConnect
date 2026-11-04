@@ -12,7 +12,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 /**
  * HTTPS endpoint for CreatorConnect AI assistant
  */
-exports.creatorConnectAI = functions.https.onRequest(async (req, res) => {
+exports.creatorConnectAI = functions.runWith({ secrets: ["GEMINI_API_KEY"] }).https.onRequest(async (req, res) => {
   // CORS configuration
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -60,7 +60,7 @@ exports.creatorConnectAI = functions.https.onRequest(async (req, res) => {
     const name = userData.fullName || userData.name || userData.username || "Creator";
 
     // 3. Initialize Gemini
-    const apiKey = GEMINI_API_KEY || functions.config().gemini?.key;
+    const apiKey = GEMINI_API_KEY;
     if (!apiKey) {
       res.status(500).json({
         error: "Server configuration error: GEMINI_API_KEY is not configured.",
@@ -70,7 +70,7 @@ exports.creatorConnectAI = functions.https.onRequest(async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-3.6-flash",
       systemInstruction: systemInstruction || `You are CreatorConnect AI assisting ${name}, a ${role}.`,
     });
 
@@ -114,4 +114,3 @@ exports.creatorConnectAI = functions.https.onRequest(async (req, res) => {
     });
   }
 });
-
