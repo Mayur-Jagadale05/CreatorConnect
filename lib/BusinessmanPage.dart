@@ -18,6 +18,7 @@ import 'package:creatorconnect/services/post_service.dart';
 import 'package:creatorconnect/widgets/create_post_dialog.dart';
 import 'package:creatorconnect/widgets/education_video_card.dart';
 import 'package:creatorconnect/widgets/post_card.dart';
+import 'package:creatorconnect/widgets/remove_connection_button.dart';
 import 'package:creatorconnect/widgets/upload_education_video_dialog.dart';
 
 class Businessmanpage extends StatefulWidget {
@@ -219,12 +220,8 @@ class _BusinessmanpageState extends State<Businessmanpage>
           .watchConnectedOrRequestedUserIds(uid)
           .listen((uids) {
         if (!mounted) return;
-        setState(() {
-          _connectedOrRequestedUids.addAll(uids);
-          creators.removeWhere(
-            (c) => _connectedOrRequestedUids.contains(c['uid']),
-          );
-        });
+        _connectedOrRequestedUids = uids;
+        _loadCreators();
       });
     }
 
@@ -3311,6 +3308,10 @@ class _BusinessmanpageState extends State<Businessmanpage>
                                                 color: purple,
                                                 size: 12,
                                               ),
+                                            ),
+                                            RemoveConnectionButton(
+                                              currentUid: user.uid,
+                                              otherUid: otherUid,
                                             ),
                                           ],
                                         ),

@@ -23,16 +23,13 @@ class AIService {
   // flutter run --dart-define=GEMINI_API_KEY=YOUR_GEMINI_KEY
   // or via Firebase Cloud Functions backend URL:
   // flutter run --dart-define=AI_BACKEND_URL=https://...
-
   static const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY');
   static const String _backendUrl = String.fromEnvironment('AI_BACKEND_URL');
 
-  // Supported model versions (ordered by preference and real-time reliability)
-  static const List<String> _candidateModels = [
-    'gemini-flash-lite-latest',
-    'gemini-3.8-flash',
-    'gemini-flash-latest',
-  ];
+  // Supported model version
+  static const String _modelName = 'gemini-1.5-flash';
+  static const String _geminiEndpoint =
+      'https://generativelanguage.googleapis.com/v1beta/models/$_modelName:generateContent';
 
   // Request lock to prevent duplicate concurrent submissions
   bool _isProcessing = false;
@@ -543,7 +540,7 @@ Kindly explain this to the user, suggest broadening the search criteria (e.g. co
     }
   }
 
-  /// Performs the actual HTTP request to either the Cloud Function or Gemini endpoint
+  /// Sends the request to the authenticated Firebase Cloud Function backend.
   Future<String> _callGemini({
     required String systemInstruction,
     required String userMessage,
@@ -598,6 +595,8 @@ Or deploy our Firebase Cloud Function backend for zero client-side key exposure!
 ''';
     }
 
+    final url = Uri.parse('$_geminiEndpoint?key=$_geminiApiKey');
+
     // Build Gemini contents array
     final contents = <Map<String, dynamic>>[];
 
@@ -619,7 +618,7 @@ Or deploy our Firebase Cloud Function backend for zero client-side key exposure!
       ],
     });
 
-    final requestBodyJson = jsonEncode({
+    final requestBody = {
       'systemInstruction': {
         'parts': [
           {'text': systemInstruction},
@@ -650,78 +649,42 @@ Or deploy our Firebase Cloud Function backend for zero client-side key exposure!
           'threshold': 'BLOCK_MEDIUM_AND_ABOVE',
         },
       ],
-    });
+    };
 
-    String lastErrorMessage = '';
+    final response = await http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(requestBody),
+        )
+        .timeout(const Duration(seconds: 35));
 
-    // Cascade through candidate models until one succeeds
-    for (final model in _candidateModels) {
-      final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$_geminiApiKey',
-      );
-
-      try {
-        final response = await http
-            .post(
-              url,
-              headers: {'Content-Type': 'application/json'},
-              body: requestBodyJson,
-            )
-            .timeout(const Duration(seconds: 35));
-
-        if (response.statusCode == 200) {
-          final json = jsonDecode(response.body) as Map<String, dynamic>;
-          final candidates = json['candidates'] as List?;
-          if (candidates != null && candidates.isNotEmpty) {
-            final content = candidates[0]['content'] as Map<String, dynamic>?;
-            final parts = content?['parts'] as List?;
-            if (parts != null && parts.isNotEmpty) {
-              final text = parts[0]['text'] as String?;
-              if (text != null && text.trim().isNotEmpty) {
-                return text.trim();
-              }
-            }
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final candidates = json['candidates'] as List?;
+      if (candidates != null && candidates.isNotEmpty) {
+        final content = candidates[0]['content'] as Map<String, dynamic>?;
+        final parts = content?['parts'] as List?;
+        if (parts != null && parts.isNotEmpty) {
+          final text = parts[0]['text'] as String?;
+          if (text != null && text.trim().isNotEmpty) {
+            return text.trim();
           }
-          return 'I received your message, but the model generated an empty response. Please rephrase your question.';
         }
-
-        final errorBody = response.body;
-        debugPrint(
-          'Gemini API ($model) Error: ${response.statusCode} - $errorBody',
+      }
+      return 'I received your message, but the model generated an empty response. Please rephrase your question.';
+    } else {
+      final errorBody = response.body;
+      debugPrint('Gemini API Error: ${response.statusCode} - $errorBody');
+      try {
+        final errJson = jsonDecode(errorBody);
+        final errMsg = errJson['error']?['message'] ?? 'Gemini service error';
+        throw Exception(errMsg);
+      } catch (_) {
+        throw Exception(
+          'Failed to reach CreatorConnect AI (HTTP ${response.statusCode}). Check your network and API key.',
         );
-
-        String extracted = '';
-        try {
-          final errJson = jsonDecode(errorBody);
-          extracted = errJson['error']?['message']?.toString() ?? '';
-        } catch (_) {}
-
-        lastErrorMessage = extracted.isNotEmpty
-            ? extracted
-            : 'HTTP ${response.statusCode} from Gemini ($model)';
-
-        // Cascade to next model if model is deprecated (404) or busy (503)
-        if (response.statusCode == 404 || response.statusCode == 503) {
-          continue;
-        }
-
-        throw Exception(lastErrorMessage);
-      } catch (e) {
-        if (e is TimeoutException) {
-          lastErrorMessage = 'Request timed out for model $model';
-          continue;
-        }
-        if (e.toString().contains('404') || e.toString().contains('503')) {
-          continue;
-        }
-        rethrow;
       }
     }
-
-    throw Exception(
-      lastErrorMessage.isNotEmpty
-          ? lastErrorMessage
-          : 'Failed to reach CreatorConnect AI. Check your network and API key.',
-    );
   }
 }
